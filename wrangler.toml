@@ -1,0 +1,19 @@
+name = "cuizhi"
+compatibility_date = "2024-01-01"
+
+[vars]
+NODE_ENV = "production"
+
+[env.production]
+vars = { NODE_ENV = "production" }
+
+[[kv_namespaces]]
+binding = "CUZHI_KV"
+id = "your-kv-namespace-id"
+
+[env.production.kv_namespaces]
+CUZHI_KV = { binding = "CUZHI_KV", id = "your-kv-namespace-id" }
+
+[pages]
+build_output_dir = "public"
+build_command = "echo 'No build needed'"

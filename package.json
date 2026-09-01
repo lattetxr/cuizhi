@@ -1,0 +1,30 @@
+{
+  "name": "cuizhi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "知乎知识炼金炉：把收藏炼成可复习、可再创作的学习包",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test",
+    "check": "node scripts/check.mjs",
+    "zhihu:smoke": "node scripts/zhihu-smoke.mjs",
+    "build": "echo 'No build needed'",
+    "deploy": "wrangler pages deploy public --project-name cuizhi",
+    "deploy:worker": "wrangler deploy",
+    "bake": "node scripts/bake-examples.mjs",
+    "perf": "node scripts/perf-check.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

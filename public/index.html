@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
+  <link rel="icon" href="data:,">
+  <title>淬知 · 收藏炼金炉</title>
+  <link rel="stylesheet" href="/styles.css?v=2">
+</head>
+<body>
+  <section id="welcomeView" class="welcome-view">
+    <nav class="wl-nav">
+      <div class="wl-brand">
+        <span class="brand-mark">淬</span>
+        <div class="wl-brand-text">
+          <strong>你好，淬知</strong>
+          <span>住在知乎的炼金炉</span>
+        </div>
+      </div>
+      <button id="wlSkipBtn" class="wl-skip">跳过引导 →</button>
+    </nav>
+
+    <div class="wl-hero">
+      <div class="wl-hero-copy">
+        <span class="wl-chip">新一代知识炼金炉 ✦</span>
+        <h2 class="wl-title">收藏会吃灰，<br><em>炼过才是你的</em></h2>
+        <p class="wl-sub">住在知乎的炼金炉。<br>把一条回答、一个问题、一份备考计划，<br>炼成能复习、能输出的学习包。</p>
+        <div class="wl-actions">
+          <button id="wlStartBtn" class="button primary wl-cta-main">立即体验 <i>→</i></button>
+          <button id="wlDemoBtn" class="button wl-cta-demo"><i>▶</i> 看看能炼出什么</button>
+        </div>
+        <p class="wl-note">* 无需登录即可体验完整流程，登录后可导入收藏夹</p>
+      </div>
+      <div class="wl-hero-art" aria-hidden="true">
+        <img class="wl-lks" src="/assets/liukanshan/greet.gif?v=2" alt="" fetchpriority="high" decoding="async">
+        <div class="wl-card wl-card-pkg">
+          <span class="wl-dot-row"><i></i><i></i><i></i></span>
+          <span class="wl-line w60"></span>
+          <span class="wl-line w80"></span>
+          <span class="wl-ring"></span>
+        </div>
+        <div class="wl-card wl-card-todo">
+          <span class="wl-check"></span><span class="wl-line w70"></span>
+          <span class="wl-check"></span><span class="wl-line w50"></span>
+          <span class="wl-check empty"></span><span class="wl-line w60"></span>
+        </div>
+        <div class="wl-card wl-card-chat">
+          <span class="wl-line w40"></span>
+          <span class="wl-line w80"></span>
+          <span class="wl-send">▷</span>
+        </div>
+        <div class="wl-card wl-card-icon">🔍</div>
+        <div class="wl-card wl-card-spark">✦</div>
+      </div>
+    </div>
+
+    <div class="wl-features">
+      <div class="wl-feature">
+        <span class="wl-f-icon">淬</span>
+        <strong>观点光谱</strong>
+        <span>多立场分布与共识分歧，「信谁的」一眼看懂</span>
+      </div>
+      <div class="wl-feature">
+        <span class="wl-f-icon">炼</span>
+        <strong>认知地图</strong>
+        <span>概念体系 + 学习路径，碎片变体系</span>
+      </div>
+      <div class="wl-feature">
+        <span class="wl-f-icon">固</span>
+        <strong>复习卡片</strong>
+        <span>概念卡 + 1/3/7/21 天间隔复习</span>
+      </div>
+      <div class="wl-feature">
+        <span class="wl-f-icon gold">验</span>
+            <strong>看山对练</strong>
+        <span>AI 扮反方 3 轮对练，输出回答草稿</span>
+      </div>
+    </div>
+
+    <div class="wl-footer">
+      <h3>现在就把收藏交给淬知</h3>
+      <button id="wlBottomBtn" class="button primary">开始炼金 →</button>
+      <p>© 2026 淬知 · 知乎 Hackathon 参赛作品</p>
+    </div>
+  </section>
+
+  <header class="topbar">
+    <div class="searchbar">
+      <div class="brand">
+        <span class="brand-mark">淬</span>
+        <div class="brand-text">
+          <h1>淬知</h1>
+          <p>收藏炼金炉</p>
+        </div>
+      </div>
+      <img class="lks-img lks-top" src="/assets/liukanshan/greet.gif?v=2" alt="" loading="lazy" decoding="async">
+      <input id="sourceInput" type="text" placeholder="粘贴知乎问题或回答链接……" autocomplete="off">
+      <button id="alchemyBtn" class="button primary">
+        <svg class="furnace-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3c1 3-2 5-2 8 0 2 1 3 3 3s3-1 3-3c0-1-.5-2-1-3"/>
+          <path d="M9 14c-2 1-3 3-3 5 0 2 2 3 6 3s6-1 6-3c0-2-1-4-3-5"/>
+        </svg>
+        开始炼金
+      </button>
+      <button id="loginBtn" class="text-btn" hidden>登录知乎</button>
+      <button id="profileBtn" class="text-btn">个人中心</button>
+      <button id="logoutBtn" class="text-btn">退出登录</button>
+      <button id="userMenuBtn" class="avatar-btn" aria-label="用户菜单" hidden>知</button>
+    </div>
+    <div id="menuPanel" class="menu-panel" hidden>
+      <div class="menu-section">
+        <div class="menu-row">
+          <span id="oauthChip" class="chip">检查中</span>
+        </div>
+        <button id="favActionBtn" class="button ghost" hidden>我的收藏</button>
+        <div id="favlistList" class="favlist-list"></div>
+      </div>
+      <div class="menu-section">
+        <h3>我的炼金</h3>
+        <div id="historyList" class="history-list">
+          <div class="empty-inline">还没有学习包</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section id="homeView" class="home-view">
+      <img class="lks-img lks-greet" src="/assets/liukanshan/greet.gif?v=2" alt="" loading="lazy" decoding="async">
+      <h2>把「收藏后吃灰」炼成「理解即能力」</h2>
+      <p>粘贴一条回答、一个问题或一份备考计划 —— 分别炼出概念卡、观点光谱和学习路径，最后和看山对练一轮</p>
+      <div class="process-flow">
+        <div class="process-step">
+          <span class="process-icon">淬</span>
+          <div class="process-info">
+            <strong>观点光谱</strong>
+            <span>立场分布 · 共识分歧</span>
+          </div>
+        </div>
+        <div class="process-step">
+          <span class="process-icon">炼</span>
+          <div class="process-info">
+            <strong>认知地图</strong>
+            <span>概念体系 · 学习路径</span>
+          </div>
+        </div>
+        <div class="process-step">
+          <span class="process-icon">固</span>
+          <div class="process-info">
+            <strong>复习卡片</strong>
+            <span>间隔重复 · 1/3/7/21 天</span>
+          </div>
+        </div>
+        <div class="process-step gold">
+          <span class="process-icon">验</span>
+          <div class="process-info">
+        <strong>看山对练</strong>
+            <span>AI 对练 · 回答草稿</span>
+          </div>
+        </div>
+      </div>
+      <h3 class="example-title">试试这三类真实场景</h3>
+      <div class="example-grid">
+        <button class="example-card" data-example="knowledge">
+          <span class="example-badge">📚 知识科普</span>
+          <strong>什么是存在主义</strong>
+          <span class="example-pain">抓取知乎回答 · 提炼关键概念生成复习卡片</span>
+        </button>
+        <button class="example-card" data-example="debate">
+          <span class="example-badge">💬 观点争议</span>
+          <strong>年轻人该不该裸辞</strong>
+          <span class="example-pain">15 条真实帖子 · 应该 / 不应该 / 中立</span>
+        </button>
+        <button class="example-card" data-example="exam">
+          <span class="example-badge">📝 备考规划</span>
+          <strong>如何备考考研</strong>
+          <span class="example-pain">基于真实帖子·按关键阶段生成学习路径</span>
+        </button>
+      </div>
+      <button id="favHomeBtn" class="button primary">登录知乎 · 导入收藏夹</button>
+      <p class="oauth-note">授权仅用于读取你的收藏夹列表与内容来炼金，不会点赞、发文或关注任何人</p>
+    </section>
+
+    <section id="workspace" class="workspace" hidden>
+      <div id="skeleton" class="skeleton" hidden>
+        <div class="skeleton-block"></div>
+        <div class="skeleton-grid">
+          <div class="skeleton-block"></div>
+          <div class="skeleton-block"></div>
+          <div class="skeleton-block"></div>
+        </div>
+        <div class="skeleton-block"></div>
+      </div>
+
+      <div id="packagePage" hidden>
+        <div class="package-card package-head-card">
+          <div id="degradedNotice"></div>
+          <div class="package-head">
+            <div>
+              <h2 id="pkgTitle"></h2>
+              <p id="pkgMeta" class="package-meta"></p>
+            </div>
+            <div class="toolbar">
+              <button id="backBtn" class="button ghost">返回</button>
+              <a id="exportMdBtn" class="button" download>Markdown</a>
+              <a id="exportHtmlBtn" class="button" download>HTML</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="学习包视图" id="tabBar">
+          <button class="tab-btn active" data-tab="viewpoint" role="tab" aria-selected="true">观点光谱</button>
+          <button class="tab-btn" data-tab="map" role="tab" aria-selected="false">认知地图</button>
+          <button class="tab-btn" data-tab="cards" role="tab" aria-selected="false">复习卡片</button>
+          <button class="tab-btn" data-tab="coach" role="tab" aria-selected="false">看山对练</button>
+          <div class="tab-more-wrap">
+            <button id="tabMoreBtn" class="tab-more" hidden>更多 ▾</button>
+            <div id="tabMorePanel" class="tab-more-panel" hidden></div>
+          </div>
+        </div>
+        <div id="tabContent"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="alchemyOverlay" class="alchemy-overlay" hidden>
+    <div class="alchemy-box">
+      <img class="lks-img lks-working" src="/assets/liukanshan/working.gif?v=2" alt="" loading="lazy" decoding="async">
+      <div class="alchemy-steps">
+        <div class="alchemy-step" data-step="quench">
+          <span class="step-index">淬取</span>
+          <span class="step-name">提取核心</span>
+        </div>
+        <div class="alchemy-step" data-step="forge">
+          <span class="step-index">炼化</span>
+          <span class="step-name">梳理结构</span>
+        </div>
+        <div class="alchemy-step" data-step="solidify">
+          <span class="step-index">固化</span>
+          <span class="step-name">生成卡片</span>
+        </div>
+        <div class="alchemy-step" data-step="verify">
+          <span class="step-index">验证</span>
+          <span class="step-name">查漏补缺</span>
+        </div>
+      </div>
+      <div class="alchemy-progress-row">
+        <div class="alchemy-progress">
+          <div class="alchemy-progress-bar" id="alchemyBar" style="width:0%"></div>
+        </div>
+        <span id="alchemyPercent" class="alchemy-percent">0%</span>
+      </div>
+      <div id="alchemyStatus" class="alchemy-status">看山正在帮你提炼精华～</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="/app.js?v=2"></script>
+</body>
+</html>

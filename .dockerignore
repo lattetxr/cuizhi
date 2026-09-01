@@ -1,0 +1,17 @@
+node_modules/
+.data/
+.env
+.env.local
+.git/
+.gitignore
+.DS_Store
+screenshots/
+test/
+*.log
+npm-debug.log*
+.idea/
+.vscode/
+*.md
+!README.md
+_worker.js
+wrangler.toml
