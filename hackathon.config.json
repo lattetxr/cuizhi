@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "projectName": "淬知",
+  "projectSlug": "cuizhi",
+  "oauth": {
+    "enabled": true,
+    "appId": "",
+    "redirectUri": null,
+    "credentialService": "zhihu-hackathon:cuizhi:local",
+    "credentialAccount": "oauth-app-key"
+  },
+  "host": "127.0.0.1",
+  "port": 4173
+}

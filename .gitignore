@@ -1,7 +1,6 @@
 # 密钥、环境变量文件
 .env
 *.env
-hackathon.config.json
 
 # 本地运行产物
 node_modules
