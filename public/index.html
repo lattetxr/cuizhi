@@ -103,6 +103,7 @@
         </svg>
         开始炼金
       </button>
+      <button id="demoBtn" class="button demo-nav-btn"><i>▶</i> 观看演示</button>
       <button id="loginBtn" class="text-btn" hidden>登录知乎</button>
       <button id="profileBtn" class="text-btn">个人中心</button>
       <button id="logoutBtn" class="text-btn">退出登录</button>
@@ -252,6 +253,154 @@
         <span id="alchemyPercent" class="alchemy-percent">0%</span>
       </div>
       <div id="alchemyStatus" class="alchemy-status">看山正在帮你提炼精华～</div>
+    </div>
+  </div>
+
+  <!-- 演示弹窗 -->
+  <div id="demoModal" class="demo-modal" hidden>
+    <div class="demo-bg">
+      <div class="demo-particles" id="demoParticles"></div>
+    </div>
+    <div class="demo-stage">
+      <div class="demo-topbar">
+        <div class="demo-brand">
+          <span class="brand-mark" style="width:28px;height:28px;font-size:14px;">淬</span>
+          <span>淬知演示</span>
+        </div>
+        <div class="demo-controls">
+          <button id="demoPauseBtn" class="demo-ctrl" title="暂停">⏸</button>
+          <button id="demoCloseBtn" class="demo-ctrl" title="关闭">✕</button>
+        </div>
+      </div>
+
+      <div id="demoScene" class="demo-scene">
+        <!-- 场景 0：开场 -->
+        <div class="demo-scene-item active" data-scene="0">
+          <div class="scene-greet">
+            <img class="scene-lks" src="/assets/liukanshan/greet.gif" alt="">
+            <div class="scene-bubble">
+              <span class="bubble-text" id="greetText"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 场景 1：介绍 -->
+        <div class="demo-scene-item" data-scene="1">
+          <div class="scene-intro">
+            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/thinking.gif" alt="">
+            <div class="intro-text">
+              <h2 class="typewriter" id="introTitle"></h2>
+              <p class="typewriter-sub" id="introSub"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 场景 2：输入选择 -->
+        <div class="demo-scene-item" data-scene="2">
+          <div class="scene-input">
+            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/idle.gif" alt="">
+            <p class="scene-input-hint">选择一种输入方式开始炼金</p>
+            <div class="input-options">
+              <button class="input-option" data-demo-type="link">
+                <span class="option-icon">🔗</span>
+                <strong>粘贴链接</strong>
+                <span>知乎问题/回答/文章</span>
+              </button>
+              <button class="input-option" data-demo-type="favlist">
+                <span class="option-icon">📦</span>
+                <strong>导入收藏夹</strong>
+                <span>一键批量炼金</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 场景 3-6：炼金动画 -->
+        <div class="demo-scene-item" data-scene="3">
+          <div class="scene-alchemy">
+            <div class="furnace-container">
+              <svg class="furnace-svg" viewBox="0 0 200 240">
+                <ellipse class="furnace-body" cx="100" cy="160" rx="70" ry="60" fill="#2d2d2d"/>
+                <ellipse class="furnace-top" cx="100" cy="105" rx="50" ry="15" fill="#3d3d3d"/>
+                <g class="furnace-flame" id="furnaceFlame">
+                  <ellipse cx="100" cy="140" rx="20" ry="30" fill="#f5a623" opacity="0.8"/>
+                  <ellipse cx="100" cy="135" rx="14" ry="22" fill="#ff6b35" opacity="0.9"/>
+                  <ellipse cx="100" cy="130" rx="8" ry="14" fill="#fff3e0"/>
+                </g>
+                <g class="furnace-smoke" id="furnaceSmoke">
+                  <circle cx="100" cy="80" r="6" fill="#ccc" opacity="0.4"/>
+                  <circle cx="90" cy="60" r="5" fill="#ccc" opacity="0.3"/>
+                  <circle cx="110" cy="50" r="4" fill="#ccc" opacity="0.2"/>
+                </g>
+              </svg>
+              <img class="scene-lks furnace-lks" id="alchemyLks" src="/assets/liukanshan/working.gif" alt="">
+            </div>
+            <div class="alchemy-progress-steps">
+              <div class="alchemy-p-step active" data-step="0">
+                <span class="p-step-icon">淬</span>
+                <span class="p-step-label">提取核心</span>
+              </div>
+              <div class="alchemy-p-step" data-step="1">
+                <span class="p-step-icon">炼</span>
+                <span class="p-step-label">梳理结构</span>
+              </div>
+              <div class="alchemy-p-step" data-step="2">
+                <span class="p-step-icon">固</span>
+                <span class="p-step-label">生成卡片</span>
+              </div>
+              <div class="alchemy-p-step" data-step="3">
+                <span class="p-step-icon">验</span>
+                <span class="p-step-label">查漏补缺</span>
+              </div>
+            </div>
+            <div class="alchemy-status-text">
+              <span class="status-dot"></span>
+              <span id="demoStatusText">看山正在帮你提炼精华～</span>
+            </div>
+            <div class="alchemy-particles" id="alchemyParticles"></div>
+          </div>
+        </div>
+
+        <!-- 场景 7：成果展示 -->
+        <div class="demo-scene-item" data-scene="7">
+          <div class="scene-result">
+            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/playful.gif" alt="">
+            <div class="result-tabs">
+              <div class="result-tab active" data-tab="viewpoint">
+                <span class="tab-icon">📊</span>
+                <span>观点光谱</span>
+              </div>
+              <div class="result-tab" data-tab="map">
+                <span class="tab-icon">🗺️</span>
+                <span>认知地图</span>
+              </div>
+              <div class="result-tab" data-tab="cards">
+                <span class="tab-icon">🃏</span>
+                <span>复习卡片</span>
+              </div>
+              <div class="result-tab" data-tab="coach">
+                <span class="tab-icon">💬</span>
+                <span>看山对练</span>
+              </div>
+            </div>
+            <div class="result-preview" id="resultPreview"></div>
+          </div>
+        </div>
+
+        <!-- 场景 8：CTA 结尾 -->
+        <div class="demo-scene-item" data-scene="8">
+          <div class="scene-cta">
+            <img class="scene-lks scene-lks-large" src="/assets/liukanshan/greet.gif" alt="">
+            <h2 class="cta-title">收藏会吃灰<br><em>炼过才是你的</em></h2>
+            <p class="cta-sub">把知乎收藏交给淬知，炼成可复习、可输出的学习包</p>
+            <button class="cta-btn" id="ctaBtn">现在就去炼金 <span>→</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-progress-bar">
+        <div class="demo-progress-fill" id="demoProgressFill"></div>
+      </div>
     </div>
   </div>
 

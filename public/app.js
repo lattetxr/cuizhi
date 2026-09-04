@@ -1875,6 +1875,309 @@ function enterApp() {
   } catch {}
 }
 
+// ========== 演示弹窗 ==========
+const demoState = {
+  active: false,
+  paused: false,
+  scene: 0,
+  alchemyStep: 0,
+  timer: null,
+  sceneTimer: null,
+  typewriterTimer: null,
+};
+
+const SCENE_DURATIONS = [3500, 4500, 0, 13000, 5000, 0];
+const STATUS_TEXTS = [
+  '正在提取核心观点...',
+  '正在梳理概念体系...',
+  '正在生成复习卡片...',
+  '正在准备对练场景...',
+];
+
+function initDemoParticles() {
+  const container = document.getElementById('demoParticles');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'demo-particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.animationDelay = Math.random() * 3 + 's';
+    container.appendChild(p);
+  }
+}
+
+function typeWriter(element, text, speed = 50) {
+  return new Promise(resolve => {
+    clearTimeout(demoState.typewriterTimer);
+    let i = 0;
+    element.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'typewriter-cursor';
+
+    function type() {
+      if (i < text.length) {
+        element.textContent += text.charAt(i);
+        i++;
+        demoState.typewriterTimer = setTimeout(type, speed);
+      } else {
+        element.appendChild(cursor);
+        setTimeout(() => {
+          cursor.remove();
+          resolve();
+        }, 500);
+      }
+    }
+    type();
+  });
+}
+
+function switchDemoScene(index) {
+  demoState.scene = index;
+
+  $$('.demo-scene-item').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
+
+  const progress = ((index + 1) / 9) * 100;
+  $('#demoProgressFill').style.width = progress + '%';
+
+  switch (index) {
+    case 0:
+      typeWriter($('#greetText'), '嗨！我是看山，帮你把收藏炼成知识～').then(() => {
+        scheduleNextScene(1000);
+      });
+      break;
+
+    case 1:
+      typeWriter($('#introTitle'), '收藏会吃灰，炼过才是你的').then(() => {
+        return typeWriter($('#introSub'), '把知乎上"收藏后吃灰"的优质内容，炼成可复习、可再创作的学习包');
+      }).then(() => {
+        scheduleNextScene(1000);
+      });
+      break;
+
+    case 2:
+      break;
+
+    case 3:
+      startAlchemyAnimation();
+      break;
+
+    case 7:
+      startResultPreview();
+      scheduleNextScene(5000);
+      break;
+
+    case 8:
+      break;
+  }
+}
+
+function scheduleNextScene(delay) {
+  clearTimeout(demoState.sceneTimer);
+  demoState.sceneTimer = setTimeout(() => {
+    if (!demoState.paused && demoState.scene < 8) {
+      switchDemoScene(demoState.scene + 1);
+    }
+  }, delay);
+}
+
+function startAlchemyAnimation() {
+  demoState.alchemyStep = 0;
+  runAlchemyStep();
+}
+
+function runAlchemyStep() {
+  if (demoState.alchemyStep >= 4) {
+    switchDemoScene(7);
+    return;
+  }
+
+  $$('.alchemy-p-step').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < demoState.alchemyStep) el.classList.add('done');
+    if (i === demoState.alchemyStep) el.classList.add('active');
+  });
+
+  $('#demoStatusText').textContent = STATUS_TEXTS[demoState.alchemyStep];
+
+  createAlchemyParticles();
+
+  const lks = $('#alchemyLks');
+  if (lks) {
+    lks.src = demoState.alchemyStep === 3
+      ? '/assets/liukanshan/thinking.gif'
+      : '/assets/liukanshan/working.gif';
+  }
+
+  demoState.alchemyStep++;
+  demoState.timer = setTimeout(runAlchemyStep, 3000);
+}
+
+function createAlchemyParticles() {
+  const container = document.getElementById('alchemyParticles');
+  if (!container) return;
+
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'alchemy-particle';
+    const startX = Math.random() * 100;
+    const startY = Math.random() < 0.5 ? 0 : 100;
+    p.style.left = startX + '%';
+    p.style.top = startY + '%';
+    p.style.animationDelay = (i * 0.1) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 2500);
+  }
+}
+
+function startResultPreview() {
+  const tabs = ['viewpoint', 'map', 'cards', 'coach'];
+  let tabIdx = 0;
+
+  function switchTab() {
+    if (!demoState.active || demoState.scene !== 7) return;
+
+    $$('.result-tab').forEach((el, i) => {
+      el.classList.toggle('active', i === tabIdx);
+    });
+
+    const preview = $('#resultPreview');
+    if (preview) {
+      preview.innerHTML = getPreviewHTML(tabs[tabIdx]);
+    }
+
+    tabIdx = (tabIdx + 1) % tabs.length;
+    setTimeout(switchTab, 1200);
+  }
+
+  switchTab();
+}
+
+function getPreviewHTML(tab) {
+  const previews = {
+    viewpoint: `
+      <div style="text-align:center;padding:40px;">
+        <div style="display:flex;justify-content:center;gap:40px;margin-bottom:24px;">
+          <div style="text-align:center;">
+            <div style="font-size:48px;font-weight:700;color:#0084ff;">45%</div>
+            <div style="color:#6b7078;margin-top:4px;">支持</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:48px;font-weight:700;color:#8e8e93;">35%</div>
+            <div style="color:#6b7078;margin-top:4px;">中立</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:48px;font-weight:700;color:#ff3b30;">20%</div>
+            <div style="color:#6b7078;margin-top:4px;">质疑</div>
+          </div>
+        </div>
+        <div style="color:#6b7078;font-size:14px;">多立场分布与共识分歧，「信谁的」一眼看懂</div>
+      </div>
+    `,
+    map: `
+      <div style="text-align:center;padding:40px;">
+        <svg width="300" height="150" viewBox="0 0 300 150">
+          <path d="M30,130 Q80,30 150,80 T270,50" stroke="#f5a623" stroke-width="3" fill="none" stroke-dasharray="5,5"/>
+          <circle cx="30" cy="130" r="15" fill="#0084ff"/>
+          <circle cx="150" cy="80" r="15" fill="#f5a623"/>
+          <circle cx="270" cy="50" r="15" fill="#34c759"/>
+          <text x="30" y="135" text-anchor="middle" fill="#fff" font-size="12">基础</text>
+          <text x="150" y="85" text-anchor="middle" fill="#fff" font-size="12">核心</text>
+          <text x="270" y="55" text-anchor="middle" fill="#fff" font-size="12">进阶</text>
+        </svg>
+        <div style="color:#6b7078;margin-top:16px;font-size:14px;">概念体系 + 学习路径，碎片变体系</div>
+      </div>
+    `,
+    cards: `
+      <div style="display:flex;justify-content:center;gap:20px;padding:40px;">
+        <div style="width:180px;height:120px;background:#fef4e5;border:2px solid #f5a623;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#f5a623;">
+          存在先于本质
+        </div>
+        <div style="width:180px;height:120px;background:#e8f3ff;border:2px solid #0084ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#0084ff;padding:12px;text-align:center;">
+          人首先存在，然后通过选择定义自己
+        </div>
+      </div>
+      <div style="text-align:center;color:#6b7078;font-size:14px;">概念卡 + 1/3/7/21 天间隔复习</div>
+    `,
+    coach: `
+      <div style="padding:20px;">
+        <div style="display:flex;gap:12px;margin-bottom:16px;">
+          <img src="/assets/liukanshan/idle.gif" style="width:40px;height:40px;">
+          <div style="background:#f2f2f7;padding:12px 16px;border-radius:12px;flex:1;font-size:14px;">
+            我认为存在主义强调个体自由是有道理的...
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <div style="background:#e8f3ff;padding:12px 16px;border-radius:12px;flex:1;text-align:right;font-size:14px;">
+            但这种自由是否过于理想化？在现实社会中...
+          </div>
+        </div>
+        <div style="text-align:center;color:#6b7078;margin-top:16px;font-size:14px;">AI 扮反方 3 轮对练，输出回答草稿</div>
+      </div>
+    `,
+  };
+  return previews[tab] || '';
+}
+
+function openDemo() {
+  demoState.active = true;
+  demoState.paused = false;
+  demoState.scene = 0;
+
+  const modal = document.getElementById('demoModal');
+  if (modal) modal.hidden = false;
+
+  initDemoParticles();
+  switchDemoScene(0);
+}
+
+function closeDemo() {
+  demoState.active = false;
+  clearTimeout(demoState.timer);
+  clearTimeout(demoState.sceneTimer);
+  clearTimeout(demoState.typewriterTimer);
+  const modal = document.getElementById('demoModal');
+  if (modal) modal.hidden = true;
+}
+
+function toggleDemoPause() {
+  demoState.paused = !demoState.paused;
+  const btn = $('#demoPauseBtn');
+  if (btn) btn.textContent = demoState.paused ? '▶' : '⏸';
+
+  if (!demoState.paused) {
+    scheduleNextScene(1000);
+  } else {
+    clearTimeout(demoState.timer);
+    clearTimeout(demoState.sceneTimer);
+  }
+}
+
+function selectDemoInput(type) {
+  switchDemoScene(3);
+}
+
+function enterAppFromDemo() {
+  closeDemo();
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#demoBtn')) {
+    openDemo();
+  } else if (e.target.closest('#demoCloseBtn')) {
+    closeDemo();
+  } else if (e.target.closest('#demoPauseBtn')) {
+    toggleDemoPause();
+  } else if (e.target.closest('[data-demo-type]')) {
+    selectDemoInput(e.target.closest('[data-demo-type]').dataset.demoType);
+  } else if (e.target.closest('#ctaBtn')) {
+    enterAppFromDemo();
+  }
+});
+
 function setupWelcome() {
   const welcome = $('#welcomeView');
   if (!welcome) return;
