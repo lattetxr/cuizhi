@@ -3686,6 +3686,10 @@ body {
 }
 
 /* ========== 演示弹窗 ========== */
+body.demo-open {
+  overflow: hidden;
+}
+
 .demo-modal {
   position: fixed;
   inset: 0;

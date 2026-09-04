@@ -1910,6 +1910,7 @@ function initDemoParticles() {
 
 function typeWriter(element, text, speed = 50) {
   return new Promise(resolve => {
+    if (!element) { resolve(); return; }
     clearTimeout(demoState.typewriterTimer);
     let i = 0;
     element.innerHTML = '';
@@ -1940,14 +1941,16 @@ function switchDemoScene(index) {
     el.classList.toggle('active', i === index);
   });
 
-  const progress = ((index + 1) / 9) * 100;
-  $('#demoProgressFill').style.width = progress + '%';
+  const total = $$('.demo-scene-item').length;
+  const progress = ((index + 1) / total) * 100;
+  const fill = $('#demoProgressFill');
+  if (fill) fill.style.width = progress + '%';
 
   switch (index) {
     case 0:
       typeWriter($('#greetText'), '嗨！我是看山，帮你把收藏炼成知识～').then(() => {
         scheduleNextScene(1000);
-      });
+      }).catch(err => console.error('[demo] scene0 error:', err));
       break;
 
     case 1:
@@ -1955,22 +1958,23 @@ function switchDemoScene(index) {
         return typeWriter($('#introSub'), '把知乎上"收藏后吃灰"的优质内容，炼成可复习、可再创作的学习包');
       }).then(() => {
         scheduleNextScene(1000);
-      });
+      }).catch(err => console.error('[demo] scene1 error:', err));
       break;
 
     case 2:
+      scheduleNextScene(3000);
       break;
 
     case 3:
       startAlchemyAnimation();
       break;
 
-    case 7:
+    case 4:
       startResultPreview();
       scheduleNextScene(5000);
       break;
 
-    case 8:
+    case 5:
       break;
   }
 }
@@ -1978,7 +1982,8 @@ function switchDemoScene(index) {
 function scheduleNextScene(delay) {
   clearTimeout(demoState.sceneTimer);
   demoState.sceneTimer = setTimeout(() => {
-    if (!demoState.paused && demoState.scene < 8) {
+    const total = $$('.demo-scene-item').length;
+    if (!demoState.paused && demoState.scene < total - 1) {
       switchDemoScene(demoState.scene + 1);
     }
   }, delay);
@@ -1991,7 +1996,7 @@ function startAlchemyAnimation() {
 
 function runAlchemyStep() {
   if (demoState.alchemyStep >= 4) {
-    switchDemoScene(7);
+    switchDemoScene(4);
     return;
   }
 
@@ -2038,7 +2043,7 @@ function startResultPreview() {
   let tabIdx = 0;
 
   function switchTab() {
-    if (!demoState.active || demoState.scene !== 7) return;
+    if (!demoState.active || demoState.scene !== 4) return;
 
     $$('.result-tab').forEach((el, i) => {
       el.classList.toggle('active', i === tabIdx);
@@ -2123,15 +2128,25 @@ function getPreviewHTML(tab) {
 }
 
 function openDemo() {
-  demoState.active = true;
-  demoState.paused = false;
-  demoState.scene = 0;
+  try {
+    demoState.active = true;
+    demoState.paused = false;
+    demoState.scene = 0;
+    demoState.alchemyStep = 0;
 
-  const modal = document.getElementById('demoModal');
-  if (modal) modal.hidden = false;
+    const modal = document.getElementById('demoModal');
+    if (!modal) {
+      console.error('[demo] #demoModal not found in DOM');
+      return;
+    }
+    modal.hidden = false;
+    document.body.classList.add('demo-open');
 
-  initDemoParticles();
-  switchDemoScene(0);
+    initDemoParticles();
+    switchDemoScene(0);
+  } catch (err) {
+    console.error('[demo] openDemo failed:', err);
+  }
 }
 
 function closeDemo() {
@@ -2141,6 +2156,7 @@ function closeDemo() {
   clearTimeout(demoState.typewriterTimer);
   const modal = document.getElementById('demoModal');
   if (modal) modal.hidden = true;
+  document.body.classList.remove('demo-open');
 }
 
 function toggleDemoPause() {
