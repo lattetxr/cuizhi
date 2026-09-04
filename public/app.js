@@ -2165,9 +2165,7 @@ function enterAppFromDemo() {
 }
 
 document.addEventListener('click', (e) => {
-  if (e.target.closest('#demoBtn')) {
-    openDemo();
-  } else if (e.target.closest('#demoCloseBtn')) {
+  if (e.target.closest('#demoCloseBtn')) {
     closeDemo();
   } else if (e.target.closest('#demoPauseBtn')) {
     toggleDemoPause();
@@ -2195,8 +2193,7 @@ function setupWelcome() {
   $('#wlBottomBtn').addEventListener('click', enterApp);
   $('#wlSkipBtn').addEventListener('click', enterApp);
   $('#wlDemoBtn').addEventListener('click', () => {
-    enterApp();
-    fillExample('knowledge');
+    openDemo();
   });
 }
 

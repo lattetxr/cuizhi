@@ -4186,17 +4186,6 @@ body {
   transition: width 0.3s;
 }
 
-/* 导航栏演示按钮 */
-.demo-nav-btn {
-  background: var(--surface);
-  border-color: var(--line);
-}
-
-.demo-nav-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* 响应式 */
 @media (max-width: 768px) {
   .scene-lks { width: 140px; }
