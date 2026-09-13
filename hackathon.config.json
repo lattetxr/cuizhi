@@ -4,8 +4,8 @@
   "projectSlug": "cuizhi",
   "oauth": {
     "enabled": true,
-    "appId": "",
-    "redirectUri": null,
+    "appId": "467",
+    "redirectUri": "https://cuizhi-production.up.railway.app/auth/callback",
     "credentialService": "zhihu-hackathon:cuizhi:local",
     "credentialAccount": "oauth-app-key"
   },
