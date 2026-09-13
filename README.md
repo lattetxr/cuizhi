@@ -118,8 +118,13 @@ npm run perf
 | `LLM_API_KEY` | LLM 密钥；不配置时自动 Mock | - | 否 |
 | `LLM_MODEL` | 模型名 | `gpt-4o-mini` | 否 |
 | `CUZHI_LLM_MODE` | `auto` / `mock` | `auto` | 否 |
-| `ZHIHU_OAUTH_APP_KEY` | OAuth App Key，生产环境通过平台 Secret 注入 | - | 是（登录功能） |
-| `ZHIHU_ACCESS_SECRET` | 知乎开放平台 Access Secret，生产环境通过平台 Secret 注入 | - | 是（用户数据） |
+| `ZHIHU_OAUTH_APP_KEY` | OAuth App Key；留空时回退读 `lib/credentials.json` | - | 是（登录功能） |
+| `ZHIHU_ACCESS_SECRET` | 知乎开放平台 Access Secret；留空时回退读 `lib/credentials.json` | - | 是（用户数据） |
+
+> ⚠️ **凭证内置说明（按需采用）**：按黑客松独立部署要求，App ID、OAuth App Key、
+> 公网回调地址保存在 `hackathon.config.json` 与 `lib/credentials.json` 中，镜像构建时
+> 一起打包，无需在部署平台手动配置 Secret。该文件包含真实密钥，**请勿提交到公开仓库或
+> 公开发布镜像**；比赛后建议改回平台 Secret / 环境变量注入。
 | `CUZHI_DATA_DIR` | 本地 JSON 数据目录 | `.data/` | 否 |
 | `PORT` | 服务端口 | `4173` | 否 |
 
@@ -133,16 +138,33 @@ npm run perf
 
 ### 2. 配置应用
 
-```bash
-# 在 hackathon.config.json 中填写 App ID
-{
-  "oauth": {
-    "enabled": true,
-    "appId": "你的App ID",
-    "redirectUri": null
-  }
-}
+当前项目已按独立部署需要内置凭证（`lib/credentials.json`），公网回调地址已配置为：
+
+```text
+https://cuizhi-production.up.railway.app/auth/callback
 ```
+
+如需改用其他凭证或回调：
+
+- 在 `hackathon.config.json` 的 `oauth.appId` / `oauth.redirectUri` 更新 App ID 与回调；
+- 在 `lib/credentials.json` 更新 `oauthAppKey` 与 `accessSecret`（或在平台用环境变量覆盖）。
+
+知乎开放平台登记的回调地址必须与上面的 `redirectUri` **完全一致**（协议/域名/路径）。
+
+### 2.1 部署到 Railway（当前使用）
+
+仓库根目录已有 `Dockerfile`，在 Railway 新建 Web Service 并部署即可，健康检查路径用
+`/api/health`。凭证已内置，默认无需配置环境变量；若在 Railway 设置了
+`ZHIHU_OAUTH_APP_KEY` / `ZHIHU_ACCESS_SECRET`，则环境变量优先。
+
+### 2.2 用户中心与两种身份模式
+
+- **直连模式（默认，无需登录）**：服务端用内置 Access Secret 直接读取该账号的关注/创作/收藏夹；
+  右上角仍显示"授权知乎账号"入口。
+- **OAuth 授权模式**：点击右上角"登录知乎/授权知乎账号"，跳转知乎授权后回到
+  `/auth/callback`，后端换取 token 并以 `X-OAuth-Token` 代表登录用户；右上角头像变为
+  该知乎用户昵称首字/头像，点击进入用户中心。
+- 知乎当前回调可能不回传 `state`，页面会提示"仅适合临时联调"；回传 state 时严格校验。
 
 ### 3. 部署到 Cloudflare Pages
 
@@ -190,8 +212,8 @@ node scripts/configure_callback.mjs \
 
 ### 6. 本地 OAuth 状态
 
-- 本地地址只能预览页面，无法完成真实知乎登录
-- 未部署前 OAuth 状态显示"等待部署"
+- 本地地址只能预览页面，无法完成真实知乎登录（授权页会跳转到登记的公网回调）
+- 但用户中心在本地也可用：内置 Access Secret 直连模式下即可浏览关注/创作/收藏夹
 - 回调不带 state 时页面提示"仅适合临时联调"
 
 ## API
@@ -199,9 +221,12 @@ node scripts/configure_callback.mjs \
 | 路由 | 说明 |
 |---|---|
 | `GET /api/health` | 健康检查 |
-| `GET /api/oauth/status` | OAuth 状态（凭证只显示脱敏信息） |
+| `GET /api/oauth/status` | OAuth 状态与当前身份（不返回密钥） |
 | `GET /auth/login` | 发起知乎 OAuth |
-| `GET /auth/callback` | OAuth 回调 |
+| `GET /auth/callback` | OAuth 回调（兼容 `authorization_code` / `code`） |
+| `GET /api/me/contents` | 创作列表（`Offset/Limit/ContentType`，返回标准化 `paging`） |
+| `GET /api/me/followees` | 关注的人（`Offset/Limit` 分页） |
+| `GET /api/me/favlists` | 收藏夹列表（`Limit`） |
 | `POST /api/alchemy` | 链接/正文炼金 |
 | `GET /api/packages` | 学习包列表 |
 | `GET /api/packages/:id` | 学习包详情 |

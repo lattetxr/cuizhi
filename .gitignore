@@ -8,3 +8,11 @@ node_modules
 .DS_Store
 .data
 npm-debug.log
+
+# 内置知乎 OAuth 密钥（独立部署本地保留；公开仓库不入库，线上用环境变量）
+lib/credentials.json
+
+# 本地工作区 / 嵌套副本
+2026-09-13-08cf7ebe/
+cuizhi/
+.workbuddy/

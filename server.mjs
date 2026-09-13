@@ -6,14 +6,14 @@ import path from 'node:path';
 import {
   getOAuthAppKey,
   getHttpAccessSecret,
-  mask,
+  getBakedCredentials,
   readConfig,
 } from './lib/config.mjs';
 import { generateRecreation, isMockMode } from './lib/llm.mjs';
 import { createReviewPlan, applyGrade, packageProgress } from './lib/review.mjs';
 import { createPackage, getPackage, listPackages, updatePackage } from './lib/store.mjs';
 import { buildAuthorizeUrl, exchangeCode, getSession, createSession, deleteSession, isPublicHttps, createPendingState, verifyState } from './lib/oauth.mjs';
-import { callUserApi, USER_ENDPOINTS } from './lib/zhihuApi.mjs';
+import { callUserApi, USER_ENDPOINTS, fetchOAuthUser, clampLimit, normalizeOffset, normalizePaging } from './lib/zhihuApi.mjs';
 import { toHtml, toMarkdown } from './lib/export.mjs';
 import { runPipeline, runPipelineFromSource, runCoachTurn } from './agents/pipeline.js';
 import { NUOCI_ANSWERS, NUOCI_META } from './server/lib/nuociDataset.js';
@@ -54,6 +54,8 @@ import { cacheGet, cacheSet } from './server/lib/cache.mjs';
 
 const app = express();
 const config = await readConfig();
+// 预热内置凭证（独立部署、无平台环境变量时从 lib/credentials.json 读取）
+await getBakedCredentials();
 const publicDir = path.join(config.projectRoot, 'public');
 const port = Number(process.env.PORT || config.port || 4173);
 const host = process.env.HOST || config.host || '127.0.0.1';
@@ -158,6 +160,37 @@ function requireSession(req, res) {
   return session;
 }
 
+const DIRECT_PROFILE = {
+  name: '知乎账号',
+  avatarUrl: null,
+  headline: '内置 Access Secret 直连模式',
+  url: null,
+};
+
+/**
+ * 身份解析：
+ * 1) OAuth 已授权用户 -> X-OAuth-Token 代表该用户
+ * 2) 未走 OAuth 但服务端配置了 Access Secret -> 直连该凭证所属账号（开发/独立部署）
+ */
+function resolveIdentity(req, res) {
+  const session = getSession(readCookie(req, 'cuizhi_oauth'));
+  if (session) {
+    return {
+      mode: 'oauth',
+      accessToken: session.accessToken,
+      profile: session.profile || DIRECT_PROFILE,
+      stateVerified: Boolean(session.stateVerified),
+    };
+  }
+  const loggedOut = readCookie(req, 'cuizhi_logged_out') === '1';
+  const access = getHttpAccessSecret();
+  if (access.value && !loggedOut) {
+    return { mode: 'direct', accessToken: null, profile: DIRECT_PROFILE, stateVerified: null };
+  }
+  res.status(401).json({ ok: false, error: '尚未完成知乎登录' });
+  return null;
+}
+
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -174,6 +207,20 @@ app.get('/api/oauth/status', asyncRoute(async (req, res) => {
   const access = getHttpAccessSecret();
   const session = getSession(readCookie(req, 'cuizhi_oauth'));
   const waitingForDeploy = !appId || !isPublicHttps(redirectUri);
+  let identity;
+  if (session) {
+    identity = {
+      mode: 'oauth',
+      authorized: true,
+      profile: session.profile || DIRECT_PROFILE,
+      stateVerified: Boolean(session.stateVerified),
+      expiresAt: session.expiresAt ? new Date(session.expiresAt).toISOString() : null,
+    };
+  } else if (access.value && readCookie(req, 'cuizhi_logged_out') !== '1') {
+    identity = { mode: 'direct', authorized: true, profile: DIRECT_PROFILE, stateVerified: null, expiresAt: null };
+  } else {
+    identity = { mode: 'none', authorized: false, profile: null, stateVerified: null, expiresAt: null };
+  }
   res.json({
     ok: true,
     oauth: {
@@ -185,8 +232,8 @@ app.get('/api/oauth/status', asyncRoute(async (req, res) => {
       appKeySource: appKey.source,
       accessSecretConfigured: Boolean(access.value),
       accessSecretSource: access.source,
-      accessSecretMasked: mask(access.value),
-      authorized: Boolean(session),
+      authorized: identity.authorized,
+      identity,
     },
     llmMock: isMockMode(),
     note: waitingForDeploy
@@ -234,8 +281,7 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
   }
   const stateVerification = verifyState(state);
   if (!stateVerification.valid) {
-    const reason = stateVerification.reason === 'missing' ? 'state_missing' : 'state_invalid';
-    res.redirect(`/?oauth=failed&reason=${reason}&hint=仅适合临时联调`);
+    res.redirect('/?oauth=failed&reason=state_invalid');
     return;
   }
   const appKey = await getOAuthAppKey(config);
@@ -244,20 +290,28 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
     return;
   }
   try {
-    const token = await exchangeCode({
+    const { accessToken, expiresIn } = await exchangeCode({
       appId,
       appKey: appKey.value,
       code: String(code),
       redirectUri,
     });
-    const sessionId = createSession(token);
+    // /user 没有正式响应 schema：资料失败不阻断登录和正式数据接口
+    const profile = await fetchOAuthUser(accessToken).catch(() => null);
+    const sessionId = createSession(accessToken, {
+      profile,
+      stateVerified: stateVerification.verified,
+      expiresIn,
+    });
     res.cookie('cuizhi_oauth', sessionId, {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000,
     });
-    res.redirect('/?oauth=success');
+    res.clearCookie('cuizhi_logged_out', { path: '/' });
+    const suffix = stateVerification.verified ? '' : '&stateVerified=0';
+    res.redirect(`/?oauth=success${suffix}`);
   } catch (error) {
     res.redirect(`/?oauth=failed&reason=${encodeURIComponent(error.message)}`);
   }
@@ -267,6 +321,13 @@ app.post('/api/oauth/logout', asyncRoute(async (req, res) => {
   const id = readCookie(req, 'cuizhi_oauth');
   if (id) deleteSession(id);
   res.clearCookie('cuizhi_oauth', { path: '/' });
+  // 退出后本次浏览器会话不再回退到内置 Access Secret 直连账号
+  res.cookie('cuizhi_logged_out', '1', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 12 * 60 * 60 * 1000,
+  });
   res.json({ ok: true });
 }));
 
@@ -590,37 +651,104 @@ app.get('/api/packages/:id/export', asyncRoute(async (req, res) => {
   }
 }));
 
-const oauthMeRoutes = [
-  ['contents', '/api/me/contents', USER_ENDPOINTS.contents, ['Limit']],
-  ['followees', '/api/me/followees', USER_ENDPOINTS.followees, ['Limit']],
-  ['favlists', '/api/me/favlists', USER_ENDPOINTS.favlists, ['Limit']],
-  ['favlistContents', '/api/me/favlist_contents', USER_ENDPOINTS.favlistContents, ['FavlistUrlToken', 'Limit']],
-  ['collections', '/api/me/collections', USER_ENDPOINTS.collections, ['Limit']],
-];
+app.get('/api/me/contents', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const limit = clampLimit(req.query.Limit, 20);
+  const offset = normalizeOffset(req.query.Offset);
+  const contentType = ['all', 'answer', 'article', 'zvideo', 'pin', 'question'].includes(req.query.ContentType)
+    ? req.query.ContentType
+    : 'all';
+  const sortField = req.query.SortField === 'like_count' ? 'like_count' : 'ts';
+  const sortOrder = req.query.SortOrder === 'asc' ? 'asc' : 'desc';
+  const data = await callUserApi(
+    USER_ENDPOINTS.contents,
+    { Offset: offset, Limit: limit, ContentType: contentType, SortField: sortField, SortOrder: sortOrder },
+    identity.accessToken,
+  );
+  res.json({
+    ok: true,
+    identity: { mode: identity.mode, profile: identity.profile, stateVerified: identity.stateVerified },
+    data,
+    paging: normalizePaging(data.Paging, { offset, limit }),
+  });
+}));
 
-for (const [name, route, endpoint, params] of oauthMeRoutes) {
-  app.get(route, asyncRoute(async (req, res) => {
-    const session = requireSession(req, res);
-    if (!session) return;
-    const query = {};
-    for (const key of params) {
-      if (req.query[key] !== undefined) query[key] = req.query[key];
-    }
-    const data = await callUserApi(endpoint, query, session.accessToken);
-    res.json({ ok: true, data });
-  }));
-}
+app.get('/api/me/followees', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const limit = clampLimit(req.query.Limit, 20);
+  const offset = normalizeOffset(req.query.Offset);
+  const data = await callUserApi(
+    USER_ENDPOINTS.followees,
+    { Offset: offset, Limit: limit },
+    identity.accessToken,
+  );
+  res.json({
+    ok: true,
+    identity: { mode: identity.mode, profile: identity.profile, stateVerified: identity.stateVerified },
+    data,
+    paging: normalizePaging(data.Paging, { offset, limit }),
+  });
+}));
+
+app.get('/api/me/favlists', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const limit = clampLimit(req.query.Limit, 20);
+  const data = await callUserApi(USER_ENDPOINTS.favlists, { Limit: limit }, identity.accessToken);
+  res.json({
+    ok: true,
+    identity: { mode: identity.mode, profile: identity.profile, stateVerified: identity.stateVerified },
+    data,
+  });
+}));
+
+app.get('/api/me/favlist_contents', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const urlToken = String(req.query.FavlistUrlToken || '').trim();
+  if (!urlToken) {
+    res.status(400).json({ ok: false, error: '缺少 FavlistUrlToken' });
+    return;
+  }
+  const limit = clampLimit(req.query.Limit, 20);
+  const offset = normalizeOffset(req.query.Offset);
+  const data = await callUserApi(
+    USER_ENDPOINTS.favlistContents,
+    { FavlistUrlToken: urlToken, Offset: offset, Limit: limit },
+    identity.accessToken,
+  );
+  res.json({
+    ok: true,
+    identity: { mode: identity.mode, profile: identity.profile, stateVerified: identity.stateVerified },
+    data,
+    paging: normalizePaging(data.Paging, { offset, limit }),
+  });
+}));
+
+app.get('/api/me/collections', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const limit = clampLimit(req.query.Limit, 20);
+  const data = await callUserApi(USER_ENDPOINTS.collections, { Limit: limit }, identity.accessToken);
+  res.json({
+    ok: true,
+    identity: { mode: identity.mode, profile: identity.profile, stateVerified: identity.stateVerified },
+    data,
+  });
+}));
 
 app.post('/api/favlists/:urlToken/alchemy', asyncRoute(async (req, res) => {
-  const session = requireSession(req, res);
-  if (!session) return;
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
   const { urlToken } = req.params;
-  const lists = await callUserApi(USER_ENDPOINTS.favlists, { Limit: 50 }, session.accessToken);
+  const lists = await callUserApi(USER_ENDPOINTS.favlists, { Limit: 50 }, identity.accessToken);
   const favlist = (lists.Items || []).find((item) => String(item.UrlToken) === String(urlToken));
   const contents = await callUserApi(
     USER_ENDPOINTS.favlistContents,
     { FavlistUrlToken: urlToken, Limit: 10 },
-    session.accessToken,
+    identity.accessToken,
   );
   const items = contents.Items || [];
   if (!items.length) {

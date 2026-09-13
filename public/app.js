@@ -84,6 +84,11 @@ const state = {
   goal: '入门',
   tab: 'url',
   oauth: null,
+  profile: {
+    followees: { items: [], offset: '0', end: false, loaded: false, loading: false },
+    contents: { items: [], offset: '0', end: false, loaded: false, loading: false },
+    favlistsLoaded: false,
+  },
   pkg: null,
   exampleSearch: false,
   exampleSearchKey: null,
@@ -187,47 +192,223 @@ function setTab(tab) {
   });
 }
 
+function initialOf(name) {
+  const text = String(name || '知').trim();
+  return text[0] || '知';
+}
+
+function avatarHtml(profile, extraClass = '') {
+  const name = profile?.name || '知乎用户';
+  const letter = escapeHtml(initialOf(name));
+  if (profile?.avatarUrl) {
+    return `<span class="avatar-wrap ${extraClass}"><span class="avatar-fallback">${letter}</span><img class="avatar-img" src="${escapeHtml(profile.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
+  }
+  return `<span class="avatar-wrap avatar-letter ${extraClass}">${letter}</span>`;
+}
+
 function renderOauth(status) {
   state.oauth = status;
-  const chip = $('#oauthChip');
+  const oauth = status.oauth || {};
+  const identity = oauth.identity || { mode: 'none', profile: null };
   const loginBtn = $('#loginBtn');
-  const logoutBtn = $('#logoutBtn');
-  const profileBtn = $('#profileBtn');
-  const userMenuBtn = $('#userMenuBtn');
-  const favAction = $('#favActionBtn');
+  const avatarBtn = $('#userMenuBtn');
   const favHomeBtn = $('#favHomeBtn');
-  const oauth = status.oauth;
 
-  if (oauth.waitingForDeploy) {
-    chip.textContent = '等待部署';
-    chip.className = 'chip deploy';
-    loginBtn.hidden = false;
-    logoutBtn.hidden = false;
-    profileBtn.hidden = false;
-    userMenuBtn.hidden = true;
-    favAction.hidden = true;
-    favHomeBtn.hidden = false;
-    favHomeBtn.textContent = '登录知乎 · 导入收藏夹';
-  } else if (oauth.authorized) {
-    chip.textContent = '已授权';
-    chip.className = 'chip ok';
-    loginBtn.hidden = true;
-    logoutBtn.hidden = false;
-    profileBtn.hidden = false;
-    userMenuBtn.hidden = false;
-    favAction.hidden = false;
-    favHomeBtn.hidden = false;
-    favHomeBtn.textContent = '查看我的收藏';
+  if (identity.authorized) {
+    loginBtn.hidden = identity.mode === 'oauth';
+    avatarBtn.hidden = false;
+    avatarBtn.innerHTML = avatarHtml(identity.profile, 'avatar-top').replace('avatar-wrap ', 'avatar-wrap ');
+    favHomeBtn.textContent = '查看我的收藏夹';
   } else {
-    chip.textContent = oauth.appKeyConfigured ? '可登录' : '等待部署';
-    chip.className = oauth.appKeyConfigured ? 'chip' : 'chip deploy';
     loginBtn.hidden = false;
-    logoutBtn.hidden = false;
-    profileBtn.hidden = false;
-    userMenuBtn.hidden = true;
-    favAction.hidden = true;
-    favHomeBtn.hidden = false;
+    avatarBtn.hidden = true;
     favHomeBtn.textContent = '登录知乎 · 导入收藏夹';
+  }
+  loginBtn.textContent = identity.mode === 'direct' ? '授权知乎账号' : '登录知乎';
+  const favAction = $('#favActionBtn');
+  if (favAction) favAction.hidden = !identity.authorized;
+  renderProfileHeader();
+}
+
+function renderProfileHeader() {
+  const view = $('#profileView');
+  if (!view) return;
+  const identity = state.oauth?.oauth?.identity;
+  const profile = identity?.profile || { name: '未登录', headline: '' };
+  $('#profileName').textContent = profile.name || '知乎用户';
+  $('#profileHeadline').textContent = profile.headline || '';
+  $('#profileAvatar').innerHTML = avatarHtml(profile, 'avatar-large');
+  const urlLink = $('#profileUrl');
+  if (profile.url) {
+    urlLink.href = profile.url;
+    urlLink.hidden = false;
+  } else {
+    urlLink.hidden = true;
+  }
+  const modeChip = $('#profileModeChip');
+  if (identity?.mode === 'oauth') {
+    modeChip.textContent = '知乎授权';
+    modeChip.className = 'chip ok';
+  } else if (identity?.mode === 'direct') {
+    modeChip.textContent = '直连模式';
+    modeChip.className = 'chip deploy';
+  } else {
+    modeChip.textContent = '未登录';
+    modeChip.className = 'chip';
+  }
+  $('#profileStateWarn').hidden = !(identity?.mode === 'oauth' && identity.stateVerified === false);
+  $('#profileLoginBtn').hidden = identity?.mode !== 'direct';
+  $('#profileLogoutBtn').hidden = identity?.mode !== 'oauth';
+}
+
+function showProfile() {
+  $('#homeView').hidden = true;
+  $('#workspace').hidden = true;
+  $('#packagePage').hidden = true;
+  $('#skeleton').hidden = true;
+  $('#profileView').hidden = false;
+  window.scrollTo({ top: 0 });
+}
+
+async function openProfile(scrollTarget = null) {
+  showProfile();
+  renderProfileHeader();
+  if (!state.profile.followees.loaded) loadFollowees();
+  if (!state.profile.favlistsLoaded) loadFavlists();
+  // 创作列表稍后请求，避免并发触发知乎 QPS 限流
+  if (!state.profile.contents.loaded) setTimeout(loadContents, 350);
+  if (scrollTarget) {
+    setTimeout(() => document.querySelector(scrollTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+}
+
+function closeProfile() {
+  $('#profileView').hidden = true;
+  if (state.pkg) {
+    $('#homeView').hidden = true;
+    $('#workspace').hidden = false;
+    $('#packagePage').hidden = false;
+  } else {
+    showEmpty();
+  }
+}
+
+function resetProfileData() {
+  state.profile = {
+    followees: { items: [], offset: '0', end: false, loaded: false, loading: false },
+    contents: { items: [], offset: '0', end: false, loaded: false, loading: false },
+    favlistsLoaded: false,
+  };
+  $('#followeeList').innerHTML = '';
+  $('#profileContentList').innerHTML = '';
+  $('#favlistList').innerHTML = '<div class="empty-inline">登录后读取收藏夹</div>';
+  $('#followTotal').textContent = '';
+  $('#contentTotal').textContent = '';
+  $('#loadMoreFollowBtn').hidden = true;
+  $('#loadMoreContentBtn').hidden = true;
+}
+
+const CONTENT_TYPE_LABELS = {
+  answer: '回答',
+  article: '文章',
+  zvideo: '视频',
+  pin: '想法',
+  question: '问题',
+};
+
+function formatZhihuTime(seconds) {
+  if (!seconds) return '';
+  return new Date(Number(seconds) * 1000).toLocaleDateString();
+}
+
+function renderFollowees() {
+  const bucket = state.profile.followees;
+  const list = $('#followeeList');
+  if (!bucket.items.length) {
+    list.innerHTML = '<div class="empty-inline">暂未关注任何人</div>';
+  } else {
+    list.innerHTML = bucket.items.map((item) => `
+      <a class="followee-item" href="${escapeHtml(item.Url)}" target="_blank" rel="noopener noreferrer">
+        ${avatarHtml({ name: item.Fullname, avatarUrl: item.AvatarUrl }, 'avatar-small')}
+        <div class="followee-info">
+          <strong>${escapeHtml(item.Fullname || '知乎用户')}</strong>
+          <span>${escapeHtml(item.Headline || '暂无介绍')}</span>
+          <em>${Number(item.FollowerCount || 0).toLocaleString()} 粉丝</em>
+        </div>
+      </a>`).join('');
+  }
+  const btn = $('#loadMoreFollowBtn');
+  btn.hidden = bucket.end || !bucket.items.length;
+  btn.disabled = bucket.loading;
+  btn.textContent = bucket.loading ? '加载中...' : '加载更多';
+  $('#followTotal').textContent = bucket.items.length ? `已显示 ${bucket.items.length} 人` : '';
+}
+
+async function loadFollowees() {
+  const bucket = state.profile.followees;
+  if (bucket.loading || bucket.end) return;
+  bucket.loading = true;
+  renderFollowees();
+  try {
+    const data = await api(`/api/me/followees?Limit=12&Offset=${encodeURIComponent(bucket.offset)}`);
+    const items = data.data?.Items || [];
+    bucket.items.push(...items);
+    bucket.end = data.paging?.isEnd ?? true;
+    bucket.offset = data.paging?.nextOffset ?? null;
+    bucket.loaded = true;
+    renderFollowees();
+  } catch (error) {
+    $('#followeeList').innerHTML = `<div class="empty-inline">${escapeHtml(error.message)}</div>`;
+  } finally {
+    bucket.loading = false;
+    renderFollowees();
+  }
+}
+
+function renderContents() {
+  const bucket = state.profile.contents;
+  const list = $('#profileContentList');
+  if (!bucket.items.length) {
+    list.innerHTML = '<div class="empty-inline">还没有创作内容</div>';
+  } else {
+    list.innerHTML = bucket.items.map((item) => `
+      <a class="content-item" href="${escapeHtml(item.Url)}" target="_blank" rel="noopener noreferrer">
+        <div class="content-item-head">
+          <span class="content-type-badge">${escapeHtml(CONTENT_TYPE_LABELS[item.ContentType] || item.ContentType || '内容')}</span>
+          <h3>${escapeHtml(item.Title || '无标题内容')}</h3>
+        </div>
+        <p>${escapeHtml(item.Summary || '')}</p>
+        <div class="content-meta">
+          <span>${formatZhihuTime(item.CreatedAt)}</span>
+          <span>赞 ${Number(item.LikeCount || 0)} · 评论 ${Number(item.CommentCount || 0)} · 收藏 ${Number(item.FavoriteCount || 0)}</span>
+        </div>
+      </a>`).join('');
+  }
+  const btn = $('#loadMoreContentBtn');
+  btn.hidden = bucket.end || !bucket.items.length;
+  btn.disabled = bucket.loading;
+  btn.textContent = bucket.loading ? '加载中...' : '加载更多';
+  $('#contentTotal').textContent = bucket.items.length ? `已显示 ${bucket.items.length} 条` : '';
+}
+
+async function loadContents() {
+  const bucket = state.profile.contents;
+  if (bucket.loading || bucket.end) return;
+  bucket.loading = true;
+  renderContents();
+  try {
+    const data = await api(`/api/me/contents?ContentType=all&Limit=10&Offset=${encodeURIComponent(bucket.offset)}`);
+    const items = data.data?.Items || [];
+    bucket.items.push(...items);
+    bucket.end = data.paging?.isEnd ?? true;
+    bucket.offset = data.paging?.nextOffset ?? null;
+    bucket.loaded = true;
+    renderContents();
+  } catch (error) {
+    $('#profileContentList').innerHTML = `<div class="empty-inline">${escapeHtml(error.message)}</div>`;
+  } finally {
+    bucket.loading = false;
+    renderContents();
   }
 }
 
@@ -243,6 +424,7 @@ function showEmpty() {
   $('#workspace').hidden = true;
   $('#packagePage').hidden = true;
   $('#skeleton').hidden = true;
+  $('#profileView').hidden = true;
   $('#homeView').hidden = false;
 }
 
@@ -259,6 +441,7 @@ function setPackageTab(name) {
 function renderPackage(pkg) {
   state.pkg = pkg;
   $('#homeView').hidden = true;
+  $('#profileView').hidden = true;
   $('#workspace').hidden = false;
   $('#skeleton').hidden = true;
   $('#packagePage').hidden = false;
@@ -1281,6 +1464,7 @@ async function loadHistory() {
 
 async function openPackage(id) {
   $('#homeView').hidden = true;
+  $('#profileView').hidden = true;
   $('#workspace').hidden = false;
   $('#packagePage').hidden = true;
   $('#skeleton').hidden = false;
@@ -1297,11 +1481,12 @@ async function openPackage(id) {
 
 async function loadFavlists() {
   const btn = $('#favActionBtn');
+  const list = $('#favlistList');
   try {
     setLoading(btn, true, '读取中...');
     const data = await api('/api/me/favlists?Limit=50');
     const items = data.data?.Items || [];
-    const list = $('#favlistList');
+    state.profile.favlistsLoaded = true;
     if (!items.length) {
       list.innerHTML = '<div class="empty-inline">没有可读取的收藏夹</div>';
       return;
@@ -1317,6 +1502,7 @@ async function loadFavlists() {
       )
       .join('');
   } catch (error) {
+    if (list) list.innerHTML = `<div class="empty-inline">${escapeHtml(error.message)}</div>`;
     toast(error.message);
   } finally {
     setLoading(btn, false);
@@ -1613,28 +1799,18 @@ function bindEvents() {
 
   $('#alchemyBtn').addEventListener('click', startAlchemy);
 
-  $('#userMenuBtn').addEventListener('click', (event) => {
-    event.stopPropagation();
-    const panel = $('#menuPanel');
-    panel.hidden = !panel.hidden;
+  $('#userMenuBtn').addEventListener('click', () => {
+    openProfile();
   });
 
-  $('#profileBtn').addEventListener('click', (event) => {
-    event.stopPropagation();
-    const panel = $('#menuPanel');
-    panel.hidden = !panel.hidden;
-  });
-
-  document.addEventListener('click', (event) => {
-    const panel = $('#menuPanel');
-    if (
-      !panel.hidden &&
-      !event.target.closest('#menuPanel') &&
-      !event.target.closest('#userMenuBtn') &&
-      !event.target.closest('#profileBtn')
-    ) {
-      panel.hidden = true;
-    }
+  $('#profileBackBtn').addEventListener('click', closeProfile);
+  $('#loadMoreFollowBtn').addEventListener('click', () => loadFollowees());
+  $('#loadMoreContentBtn').addEventListener('click', () => loadContents());
+  $('#profileLogoutBtn').addEventListener('click', async () => {
+    await api('/api/oauth/logout', { method: 'POST' });
+    resetProfileData();
+    await refreshOauth();
+    toast('已退出登录');
   });
 
   $$('.tab-btn').forEach((btn) => {
@@ -1655,22 +1831,16 @@ function bindEvents() {
   });
 
   $('#favHomeBtn').addEventListener('click', () => {
-    if (state.oauth?.oauth?.authorized) {
-      loadFavlists();
+    const oauth = state.oauth?.oauth;
+    if (oauth?.identity?.authorized) {
+      openProfile('.profile-panel-favlists');
       return;
     }
-    if (state.oauth?.oauth?.waitingForDeploy) {
+    if (oauth?.waitingForDeploy) {
       toast('等待部署：本地地址无法完成真实知乎登录');
       return;
     }
     window.location.href = '/auth/login';
-  });
-
-  $('#logoutBtn').addEventListener('click', async () => {
-    await api('/api/oauth/logout', { method: 'POST' });
-    await refreshOauth();
-    $('#favlistList').innerHTML = '';
-    toast('已退出登录');
   });
 
   $('#favActionBtn').addEventListener('click', loadFavlists);
@@ -2218,7 +2388,9 @@ async function init() {
   bindEvents();
   hideAlchemyOverlay();
   const params = new URLSearchParams(window.location.search);
-  if (params.get('oauth') === 'success') toast('知乎登录成功');
+  if (params.get('oauth') === 'success') {
+    toast(params.get('stateVerified') === '0' ? '知乎登录成功（本次未回传 state，仅适合临时联调）' : '知乎登录成功', 4200);
+  }
   if (params.get('oauth') === 'failed') toast('知乎登录未完成，请检查部署与回调配置');
   await refreshOauth();
   await loadHistory();

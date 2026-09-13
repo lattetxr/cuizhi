@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=4">
+  <link rel="stylesheet" href="/styles.css?v=5">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -104,28 +104,72 @@
         开始炼金
       </button>
       <button id="loginBtn" class="text-btn" hidden>登录知乎</button>
-      <button id="profileBtn" class="text-btn">个人中心</button>
-      <button id="logoutBtn" class="text-btn">退出登录</button>
-      <button id="userMenuBtn" class="avatar-btn" aria-label="用户菜单" hidden>知</button>
-    </div>
-    <div id="menuPanel" class="menu-panel" hidden>
-      <div class="menu-section">
-        <div class="menu-row">
-          <span id="oauthChip" class="chip">检查中</span>
-        </div>
-        <button id="favActionBtn" class="button ghost" hidden>我的收藏</button>
-        <div id="favlistList" class="favlist-list"></div>
-      </div>
-      <div class="menu-section">
-        <h3>我的炼金</h3>
-        <div id="historyList" class="history-list">
-          <div class="empty-inline">还没有学习包</div>
-        </div>
-      </div>
+      <button id="userMenuBtn" class="avatar-btn" aria-label="个人中心" title="个人中心" hidden>知</button>
     </div>
   </header>
 
   <main class="stage">
+    <section id="profileView" class="profile-view" hidden>
+      <div class="profile-head-card">
+        <button id="profileBackBtn" class="button ghost profile-back">← 返回</button>
+        <div class="profile-id">
+          <div id="profileAvatar" class="profile-avatar">知</div>
+          <div class="profile-meta">
+            <div class="profile-name-row">
+              <h2 id="profileName">知乎用户</h2>
+              <span id="profileModeChip" class="chip">检查中</span>
+            </div>
+            <p id="profileHeadline" class="profile-headline"></p>
+            <a id="profileUrl" class="profile-link" target="_blank" rel="noopener noreferrer" hidden>查看知乎主页 ↗</a>
+            <p id="profileStateWarn" class="profile-state-warn" hidden>知乎本次回调未回传 state，登录仅适合临时联调</p>
+            <div class="profile-actions">
+              <a id="profileLoginBtn" class="button primary" href="/auth/login" hidden>授权知乎账号</a>
+              <button id="profileLogoutBtn" class="button danger" hidden>退出登录</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <section class="panel profile-panel profile-panel-favlists">
+          <div class="panel-head">
+            <h2>我的收藏夹</h2>
+            <button id="favActionBtn" class="button ghost" hidden>刷新</button>
+          </div>
+          <div id="favlistList" class="favlist-list">
+            <div class="empty-inline">登录后读取收藏夹</div>
+          </div>
+        </section>
+
+        <section class="panel profile-panel">
+          <div class="panel-head">
+            <h2>关注的人</h2>
+            <span id="followTotal" class="muted-line"></span>
+          </div>
+          <div id="followeeList" class="followee-list"></div>
+          <button id="loadMoreFollowBtn" class="button ghost load-more" hidden>加载更多</button>
+        </section>
+
+        <section class="panel profile-panel">
+          <div class="panel-head">
+            <h2>我的创作</h2>
+            <span id="contentTotal" class="muted-line"></span>
+          </div>
+          <div id="profileContentList" class="content-list"></div>
+          <button id="loadMoreContentBtn" class="button ghost load-more" hidden>加载更多</button>
+        </section>
+
+        <section class="panel profile-panel profile-panel-history">
+          <div class="panel-head">
+            <h2>我的炼金记录</h2>
+          </div>
+          <div id="historyList" class="history-list">
+            <div class="empty-inline">还没有学习包</div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <section id="homeView" class="home-view">
       <img class="lks-img lks-greet" src="/assets/liukanshan/greet.gif?v=2" alt="" loading="lazy" decoding="async">
       <h2>把「收藏后吃灰」炼成「理解即能力」</h2>
@@ -404,6 +448,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=4"></script>
+  <script type="module" src="/app.js?v=5"></script>
 </body>
 </html>
