@@ -8,7 +8,8 @@ export async function callStructuredJson({
   user,
   schemaName,
   mockData,
-  maxRepairRetries = 1,
+  maxRepairRetries = 0,
+  timeoutMs = 10000,
 }) {
   if (isMockMode()) {
     return {
@@ -25,6 +26,7 @@ export async function callStructuredJson({
         { role: 'user', content: currentUser },
       ],
       true,
+      { timeoutMs },
     );
     let parsed;
     try {

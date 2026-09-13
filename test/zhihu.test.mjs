@@ -125,3 +125,37 @@ test('Mock fetchFavorites 返回收藏夹与内容', async () => {
   assert.ok(result.favlists.length >= 1);
   assert.ok(result.favlists[0].contents.length >= 1);
 });
+
+test('链接炼金也只调用一次 zhihu_search，避免多 Query 串行拖慢', async () => {
+  clearCache();
+  process.env.CUIZHI_ZHIHU_MODE = 'auto';
+  process.env.ZHIHU_ACCESS_SECRET = REAL_SECRET;
+  const requests = [];
+  __setTransport(async (url) => {
+    const rawUrl = String(url);
+    requests.push(rawUrl);
+    if (rawUrl.includes('/api/v1/content/zhihu_search')) {
+      const items = Array.from({ length: 3 }, (_, index) => ({
+        Title: `链接搜索结果 ${index + 1}`,
+        ContentType: 'Answer',
+        ContentID: `link-answer-${index + 1}`,
+        ContentText: '用于验证链接炼金只搜索一次的摘要',
+        Url: `https://www.zhihu.com/question/100/answer/${index + 1}`,
+        CommentCount: 0,
+        VoteUpCount: 20 + index,
+        AuthorName: `作者${index + 1}`,
+        AuthorityLevel: 2,
+        RankingScore: 0.8,
+      }));
+      return new Response(
+        JSON.stringify({ Code: 0, Data: { Items: items } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    return new Response('<html><title>示例问题 - 知乎</title></html>', { status: 200 });
+  });
+  const items = await fetchContent('https://www.zhihu.com/question/100/answer/200');
+  const searchCalls = requests.filter((url) => url.includes('/api/v1/content/zhihu_search'));
+  assert.equal(searchCalls.length, 1);
+  assert.equal(items.length, 3);
+});

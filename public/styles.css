@@ -4512,8 +4512,11 @@ body.demo-open {
 }
 
 .hot-item {
+  width: 100%;
+  min-height: 68px;
+  box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   padding: 10px 12px;
   text-align: left;
@@ -4548,8 +4551,10 @@ body.demo-open {
 }
 
 .hot-text {
+  flex: 1 1 auto;
   display: grid;
-  gap: 2px;
+  grid-template-rows: auto 1fr;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -4562,7 +4567,9 @@ body.demo-open {
 }
 
 .hot-text small {
+  display: block;
   font-size: 12px;
+  line-height: 1.45;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4848,7 +4855,7 @@ body.demo-open {
 }
 
 
-.hot-list-placeholder {
+.hot-list.hot-list-placeholder {
   grid-template-columns: 1fr;
   justify-items: center;
   padding: 8px 0 2px;

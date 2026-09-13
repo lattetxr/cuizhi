@@ -143,9 +143,9 @@ async function requestJson(path, {
   throw lastError || new ZhihuError('NETWORK_ERROR', '知乎接口请求失败');
 }
 
-async function fetchPageTitle(url) {
+async function fetchPageTitle(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await transport(url, {
       signal: controller.signal,
@@ -381,30 +381,26 @@ export async function fetchContent(questionIdOrUrl, { limit = 10 } = {}) {
 
   try {
     const looksLikeUrl = /^https?:\/\//i.test(String(questionIdOrUrl || ''));
-    const title = parsed?.title || (looksLikeUrl ? await fetchPageTitle(parsed.url) : '');
-    const queries = [];
-    if (title) queries.push(title);
-    if (looksLikeUrl && parsed?.url) queries.push(parsed.url);
-    if (!queries.length) {
-      queries.push(
-        parsed?.type === 'answer' ? `知乎回答 ${parsed.answerId}` : `知乎问题 ${questionId}`,
-      );
-    }
+    // 标题抓取只给 2.5 秒：它只是搜索 Query 的增强，不能挤占 20 秒炼金预算。
+    const title = parsed?.title || (looksLikeUrl ? await fetchPageTitle(parsed.url, 2500) : '');
+    const query = title
+      ? title
+      : looksLikeUrl && parsed?.url
+        ? parsed.url
+        : parsed?.type === 'answer'
+          ? `知乎回答 ${parsed.answerId}`
+          : `知乎问题 ${questionId}`;
 
+    // 链接炼金同样只消耗 1 次搜索配额；多 Query 串行猜测会同时拖慢速度并放大配额消耗。
     const collected = new Map();
-    const targetAnswers = Math.min(limit, 5);
-    for (const query of [...new Set(queries)].slice(0, 3)) {
-      const data = await requestJson(SEARCH_PATH, {
-        query: { Query: query, Count: 10 },
-        accessSecret: access.value,
-      });
-      for (const item of mapSearchItems(data.Data?.Items || [])) {
-        if (!collected.has(item.answerId)) collected.set(item.answerId, item);
-      }
-      const answerCount = [...collected.values()].filter(
-        (item) => item.contentType === 'answer',
-      ).length;
-      if (answerCount >= targetAnswers) break;
+    const data = await requestJson(SEARCH_PATH, {
+      query: { Query: query, Count: normalizeLimit(limit, 10, 10) },
+      accessSecret: access.value,
+      timeoutMs: 6000,
+      retries: 0,
+    });
+    for (const item of mapSearchItems(data.Data?.Items || [])) {
+      if (!collected.has(item.answerId)) collected.set(item.answerId, item);
     }
     const items = [...collected.values()]
       .sort((a, b) => {
@@ -427,7 +423,7 @@ export async function fetchContent(questionIdOrUrl, { limit = 10 } = {}) {
         demo: false,
         source: 'zhihu',
         notice: null,
-        query: queries.join(' | '),
+        query,
       }),
       CACHE_TTL_MS,
     );
@@ -586,6 +582,8 @@ export async function searchZhihu(query, { count = 10 } = {}) {
     const data = await requestJson(SEARCH_PATH, {
       query: { Query: query, Count: normalizeLimit(count, 10, 10) },
       accessSecret: access.value,
+      timeoutMs: 6000,
+      retries: 0,
     });
     return cacheSet(cacheKey, {
       demo: false,
@@ -624,6 +622,8 @@ async function fetchHotListInner({ limit = 20 } = {}) {
     const data = await requestJson(HOT_PATH, {
       query: { Limit: normalizeLimit(limit, 20, 30) },
       accessSecret: access.value,
+      timeoutMs: 6000,
+      retries: 0,
     });
     return cacheSet(cacheKey, {
       demo: false,

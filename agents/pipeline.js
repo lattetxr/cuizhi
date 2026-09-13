@@ -63,9 +63,9 @@ export async function runPipeline({ answers, options = {}, prefilled = {}, onPro
     }
   }
 
-  // viewpoint 与 map 并行：map 仅把 viewpoint 当作可选上下文（缺省 {}），
-  // 两者都只以来源回答为准，并行可省一次 LLM 往返。
-  // prefilled 可注入内置结果（如内置数据集的认知地图/卡片），直接跳过对应 LLM 调用。
+  // 三路结构化结果全部并发：观点、地图、卡片都以同一批来源回答为依据，
+  // 卡片不再等待地图完成，真实模型下总耗时约等于最慢的一次请求，而不是三段相加。
+  // prefilled 可注入内置结果（如内置数据集的认知地图/卡片），直接跳过对应 LLM 请求。
   const viewpointPromise = prefilled.viewpoint
     ? Promise.resolve(prefilled.viewpoint)
     : runStep('viewpoint', viewpointAgent, { answers: normalized });
@@ -75,13 +75,17 @@ export async function runPipeline({ answers, options = {}, prefilled = {}, onPro
         answers: normalized,
         viewpoint: prefilled.viewpoint || {},
       });
+  const cardsPromise = prefilled.cards
+    ? Promise.resolve(sanitizeIds(prefilled.cards, allowed))
+    : runStep('cards', cardAgent, { answers: normalized, map: {} });
 
   emit(PIPELINE_PHASES.viewpointMap);
-  const [viewpoint, map] = await Promise.all([viewpointPromise, mapPromise]);
-  emit(PIPELINE_PHASES.cards);
-  const cards = prefilled.cards
-    ? sanitizeIds(prefilled.cards, allowed)
-    : await runStep('cards', cardAgent, { answers: normalized, map });
+  const corePromise = Promise.all([viewpointPromise, mapPromise]).then((result) => {
+    emit(PIPELINE_PHASES.cards);
+    return result;
+  });
+  const [viewpoint, map] = await corePromise;
+  const cards = await cardsPromise;
   emit(PIPELINE_PHASES.verify);
 
   return {

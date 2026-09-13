@@ -1619,11 +1619,15 @@ function updatePreviewSelection() {
 async function loadHotList() {
   const box = $('#hotList');
   const hint = $('#hotHint');
+  const quotaNote = $('#hotQuotaNote');
   if (!box) return;
   try {
     const data = await api('/api/zhihu/hot?limit=8');
     const items = data.items || [];
+    box.classList.remove('hot-list-placeholder');
+    if (quotaNote) quotaNote.hidden = true;
     if (!items.length) {
+      box.classList.add('hot-list-placeholder');
       box.innerHTML = '<div class="empty-inline">今日热榜暂不可用</div>';
       if (hint) hint.textContent = '';
       return;
@@ -1644,6 +1648,7 @@ async function loadHotList() {
       hint.textContent = data.demo ? '演示数据' : '来自知乎热榜（全站共享缓存）';
     }
   } catch (error) {
+    box.classList.add('hot-list-placeholder');
     box.innerHTML = '<div class="empty-inline">热榜加载失败，可直接输入关键词</div>';
   }
 }
@@ -1771,7 +1776,11 @@ function createAlchemyProgress() {
   const startedAt = Date.now();
   const MIN_SHOW_MS = 900;
   let finished = false;
+  let cancelled = false;
   let activeIndex = -1;
+  let displayed = 0;
+  let ceiling = 34;
+  let lastPaint = 0;
 
   const paintSteps = (index, allDone) => {
     steps.forEach(([step], i) => {
@@ -1782,7 +1791,7 @@ function createAlchemyProgress() {
     });
   };
 
-  const render = (pct, statusText) => {
+  const paint = (pct, statusText) => {
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
     $('#alchemyBar').style.width = `${clamped}%`;
     $('#alchemyPercent').textContent = `${clamped}%`;
@@ -1794,12 +1803,41 @@ function createAlchemyProgress() {
     if (statusText) $('#alchemyStatus').textContent = statusText;
   };
 
+  const render = (pct, statusText) => {
+    const anchor = Math.max(0, Math.min(100, Number(pct) || 0));
+    if (!finished && anchor >= displayed) displayed = anchor;
+    if (anchor <= 8) ceiling = 34;
+    else if (anchor <= 42) ceiling = 66;
+    else if (anchor <= 72) ceiling = 84;
+    else if (anchor <= 88) ceiling = 96;
+    else ceiling = 99;
+    paint(displayed, statusText);
+  };
+
+  // 模型并发生成时，服务端只需要发送阶段锚点；前端在两个锚点间平滑逼近，
+  // 既不假装已经完成，也避免用户看到进度条长时间停在同一个百分比。
+  const timer = setInterval(() => {
+    if (finished || cancelled) return;
+    const now = Date.now();
+    if (now - lastPaint < 120) return;
+    lastPaint = now;
+    const gap = ceiling - displayed;
+    if (gap > 0) {
+      displayed = Math.min(ceiling, displayed + Math.max(0.25, gap * 0.045));
+      paint(displayed);
+    }
+  }, 120);
+
   render(0, '看山正在准备炼金原料');
 
   return {
     update(progress, statusText) {
-      if (finished) return;
+      if (finished || cancelled) return;
       render(progress, statusText);
+    },
+    cancel() {
+      cancelled = true;
+      clearInterval(timer);
     },
     async finish(statusText = '炼金完成，正在整理学习包～') {
       if (finished) return;
@@ -1808,8 +1846,10 @@ function createAlchemyProgress() {
         await new Promise((resolve) => setTimeout(resolve, remain));
       }
       finished = true;
+      clearInterval(timer);
       paintSteps(steps.length, true);
-      render(100, statusText);
+      displayed = 100;
+      paint(100, statusText);
     },
   };
 }
@@ -1894,6 +1934,7 @@ async function runAlchemy(payload) {
     loadHistory();
   } catch (error) {
     console.error(error);
+    progress.cancel();
     showEmpty();
     toast(error.message);
   } finally {

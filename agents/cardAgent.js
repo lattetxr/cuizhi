@@ -1,7 +1,7 @@
 import { createAgent } from './agentBase.js';
 import { extractTopic, pickIds } from './mockUtils.js';
 
-const system = (ctx) => `你是知乎知识炼金炉的「复习卡片」设计师。你基于来源回答与认知地图，生成适合主动回忆的间隔重复卡片，并给出 1/3/7/21 天排期。
+const system = (ctx) => `你是知乎知识炼金炉的「复习卡片」设计师。你基于来源回答生成适合主动回忆的间隔重复卡片，并给出 1/3/7/21 天排期。
 
 规则：
 - 卡片问题要能脱离原文独立回答，答案不得编造。
@@ -17,10 +17,14 @@ const system = (ctx) => `你是知乎知识炼金炉的「复习卡片」设计�
 const buildUser = (ctx, input) => `来源回答：
 ${ctx.labeledText}
 
-已有认知地图：
-${JSON.stringify(input.map || {}, null, 2)}
+${
+  input.map && Object.keys(input.map).length
+    ? `可参考已有认知地图：
+${JSON.stringify(input.map, null, 2)}
 
-请输出 cards JSON，结构为：
+`
+    : ''
+}请输出 cards JSON，结构为：
 {
   "cards": [
     {"id": "card-1", "type": "qa|concept|scenario", "front": "问题或概念名", "back": "答案或解释", "source_answer_ids": ["answerId"]}
