@@ -5,7 +5,19 @@ import { cacheGet, cacheSet } from './cache.mjs';
 const BASE_API = 'https://developer.zhihu.com';
 const SEARCH_PATH = '/api/v1/content/zhihu_search';
 const HOT_PATH = '/api/v1/content/hot_list';
+const QUOTA_PATH = '/api/v1/quota';
 const CHAT_PATH = '/v1/chat/completions';
+
+// 单飞：热榜/额度这类「全员共享、配额极小」的请求，并发只打一次
+const inflight = new Map();
+function dedupe(key, producer) {
+  if (inflight.has(key)) return inflight.get(key);
+  const promise = Promise.resolve()
+    .then(producer)
+    .finally(() => inflight.delete(key));
+  inflight.set(key, promise);
+  return promise;
+}
 const DEFAULT_TIMEOUT_MS = 10000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -588,7 +600,11 @@ export async function searchZhihu(query, { count = 10 } = {}) {
   }
 }
 
-export async function fetchHotList({ limit = 20 } = {}) {
+export async function fetchHotList(options = {}) {
+  return dedupe('hot', () => fetchHotListInner(options));
+}
+
+async function fetchHotListInner({ limit = 20 } = {}) {
   const cacheKey = 'zhihu:hot';
   const cached = cacheGet(cacheKey);
   if (cached) return cloneWithMeta(cached, { fromCache: true });
@@ -663,4 +679,183 @@ export async function credentialSummary() {
     source: access.source,
     mode: shouldUseMock() || !access.value ? 'mock' : 'real',
   };
+}
+
+// ========== 关键词炼金：单次知乎搜索 + 按问题聚合（省配额、保立场多样性） ==========
+
+function questionKeyFromUrl(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    const question = u.pathname.match(/^\/question\/(\d+)/);
+    if (question) return `q:${question[1]}`;
+    const answer = u.pathname.match(/^\/answer\/(\d+)/);
+    if (answer) return `a:${answer[1]}`;
+    const article = u.pathname.match(/^\/p\/(\d+)/);
+    if (article) return `p:${article[1]}`;
+    const pin = u.pathname.match(/^\/pin\/(\d+)/);
+    if (pin) return `pin:${pin[1]}`;
+    const video = u.pathname.match(/^\/zvideo\/(\w+)/);
+    if (video) return `zv:${video[1]}`;
+    return u.pathname || rawUrl;
+  } catch {
+    return `x:${hash(String(rawUrl))}`;
+  }
+}
+
+/**
+ * 关键词炼金的取数入口：只打 1 次 zhihu_search（searchZhihu 内带 24h 缓存），
+ * 再按「所属问题」分组并轮转取样，保证观点光谱尽量来自不同问题/作者。
+ * 返回数组（与 fetchContent 兼容，挂 demo/notice 等元信息）。
+ */
+export async function searchForAlchemy(query, { limit = 8, answerIds = null } = {}) {
+  const term = String(query || '').trim();
+  const result = await searchZhihu(term, { count: 10 });
+  const items = Array.isArray(result.items) ? result.items : [];
+
+  const groups = new Map();
+  for (const item of items) {
+    const key = questionKeyFromUrl(item.url || `${item.answerId}`);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+
+  // 用户在预览中勾选了具体帖子：只炼所选内容（预览与炼金共用同一份缓存结果）
+  if (Array.isArray(answerIds) && answerIds.length) {
+    const wanted = new Set(answerIds.map(String));
+    const selected = items.filter((item) => wanted.has(String(item.answerId)));
+    if (selected.length) {
+      return Object.assign(selected, {
+        demo: Boolean(result.demo),
+        notice: result.notice || null,
+        source: result.demo ? 'mock' : 'zhihu',
+        query: term,
+        count: selected.length,
+        questionCount: new Set(selected.map((item) => questionKeyFromUrl(item.url || item.answerId))).size,
+      });
+    }
+  }
+
+  const target = Math.min(normalizeLimit(limit, 8, 10), 10);
+  const queues = [...groups.values()];
+  const pointers = queues.map(() => 0);
+  const picked = [];
+  const seen = new Set();
+  let progressed = true;
+  // 第一轮每个问题取 1 条（立场多样），之后再回头补同问题的其他回答
+  while (picked.length < target && progressed) {
+    progressed = false;
+    for (let i = 0; i < queues.length; i += 1) {
+      if (picked.length >= target) break;
+      const queue = queues[i];
+      if (pointers[i] < queue.length) {
+        const item = queue[pointers[i]];
+        pointers[i] += 1;
+        const id = String(item.answerId);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        picked.push(item);
+        progressed = true;
+      }
+    }
+  }
+
+  let demo = Boolean(result.demo);
+  let notice = result.notice || null;
+  if (picked.length === 0) {
+    // 真实搜索 0 条：降级为演示数据，保证炼金管线可运行并明确提示
+    picked.push(...mockAnswerList().slice(0, 5));
+    demo = true;
+    notice = notice || '没有搜到相关知乎内容，已切换为演示数据，换个关键词试试';
+  }
+  return Object.assign(picked, {
+    demo,
+    notice,
+    source: demo ? 'mock' : 'zhihu',
+    query: term,
+    count: picked.length,
+    questionCount: groups.size,
+  });
+}
+
+// ========== 关键词搜索预览：优质帖子 + 按问题聚合的数量比例 ==========
+
+function displayQuestionTitle(item) {
+  return String(item.title || '')
+    .replace(/\s*-\s*知乎\s*$/, '')
+    .trim();
+}
+
+/**
+ * 输入问题后先预览：1 次 zhihu_search（24h 缓存），
+ * 返回按质量排序的帖子与「所属问题 → 帖子数量」的比例分布。
+ */
+export async function previewSearch(query, { count = 10 } = {}) {
+  const term = String(query || '').trim();
+  const result = await searchZhihu(term, { count });
+  const items = Array.isArray(result.items) ? result.items : [];
+
+  const groupMap = new Map();
+  for (const item of items) {
+    const key = questionKeyFromUrl(item.url || `${item.answerId}`);
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        key,
+        title: displayQuestionTitle(item) || '相关问题',
+        sampleUrl: item.url || '',
+        count: 0,
+        authors: [],
+        votes: 0,
+      });
+    }
+    const group = groupMap.get(key);
+    group.count += 1;
+    group.votes += Number(item.voteCount || 0);
+    if (item.author && !group.authors.includes(item.author)) group.authors.push(item.author);
+  }
+  const groups = [...groupMap.values()]
+    .sort((a, b) => b.count - a.count || b.votes - a.votes)
+    .map((group) => ({
+      ...group,
+      ratio: items.length ? group.count / items.length : 0,
+    }));
+
+  return {
+    demo: Boolean(result.demo),
+    notice: result.notice || null,
+    query: term,
+    total: items.length,
+    items,
+    groups,
+  };
+}
+
+/**
+ * 开放平台剩余额度（60s 短缓存 + 单飞）。失败不阻断业务，只返回空数组。
+ */
+export async function fetchQuota() {
+  const cacheKey = 'zhihu:quota';
+  const cached = cacheGet(cacheKey);
+  if (cached) return cloneWithMeta(cached, { fromCache: true });
+  return dedupe('quota', async () => {
+    const hit = cacheGet(cacheKey);
+    if (hit) return hit;
+    const access = getHttpAccessSecret();
+    if (shouldUseMock() || !access.value) {
+      return { configured: false, items: [] };
+    }
+    try {
+      const data = await requestJson(QUOTA_PATH, {
+        accessSecret: access.value,
+        timeoutMs: 8000,
+        retries: 0,
+      });
+      return cacheSet(
+        cacheKey,
+        { configured: true, items: data.Data || [] },
+        60 * 1000,
+      );
+    } catch (error) {
+      return { configured: true, items: [], error: error.code || 'QUOTA_ERROR' };
+    }
+  });
 }

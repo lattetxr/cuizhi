@@ -9,6 +9,13 @@ const system = (ctx) => `你是知乎知识炼金炉的「观点光谱」分析�
 - 至少区分 3 种立场；共识点必须是多个回答共同认可的内容；分歧本质要说明分歧发生在哪个环节。
 - content_type 必须判断为以下之一：knowledge（知识科普/方法论，教概念和做法）、debate（观点争议，存在该不该/谁对等立场对立）、exam（备考/考试/时间规划）、collection（收藏夹批量内容）。
 - 若 content_type 为 debate，立场必须是恰好 3 个：对立两派 + 中立派，立场名用大众化表述（如「应该裸辞」「不应该裸辞」「中立」这类对立+中立的命名）。
+
+写作质量要求（务必遵守）：
+- 使用规范、自然的书面中文，符合中文表达习惯，不出现翻译腔或口号式空话。
+- summary 用 120-220 字写成一段有逻辑的导读：先交代问题背景与争议焦点，再概括各立场分布，最后点出对学习者最有价值的结论。
+- stance_summary 不是口号，要用 80-160 字完整阐述该立场：持此立场者如何论证、适用的前提条件和人群、可能的代价，体现因果链而非简单表态。
+- arguments 每个立场给 2-3 条，每条 40-100 字，必须是「观点 + 原因/机制 + 原文情境」的完整句子，能独立读懂，禁止一两句泛泛而谈。
+- consensus 每条约 30-80 字并说明为何各方都能接受；divergence 用 80-160 字解释分歧真正发生在目标、前提、代价还是时间尺度上，并给出读者如何取舍的建议。
 - 输出必须严格符合 viewpoint JSON Schema。`;
 
 const buildUser = (ctx) => `请分析以下 ${ctx.answers.length} 条来源回答：
@@ -27,7 +34,8 @@ ${ctx.labeledText}
   "source_answer_ids": ["所有被引用的 answerId"]
 }
 
-至少 3 个 stance；每个 stance 至少 1 条论据；source_answer_ids 只能使用上方回答中的 answerId。`;
+至少 3 个 stance；每个 stance 给 2-3 条论据；source_answer_ids 只能使用上方回答中的 answerId。
+所有文字都要内容充实、逻辑完整、具有学习价值，避免一两句空泛结论。`;
 
 function detectContentType(answers) {
   const text = answers

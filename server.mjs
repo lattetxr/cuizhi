@@ -15,7 +15,8 @@ import { createPackage, getPackage, listPackages, updatePackage } from './lib/st
 import { buildAuthorizeUrl, exchangeCode, getSession, createSession, deleteSession, isPublicHttps, createPendingState, verifyState } from './lib/oauth.mjs';
 import { callUserApi, USER_ENDPOINTS, fetchOAuthUser, clampLimit, normalizeOffset, normalizePaging } from './lib/zhihuApi.mjs';
 import { toHtml, toMarkdown } from './lib/export.mjs';
-import { runPipeline, runPipelineFromSource, runCoachTurn } from './agents/pipeline.js';
+import { runPipeline, runPipelineFromSource, runPipelineFromSearch, runCoachTurn, previewSearch } from './agents/pipeline.js';
+import { fetchHotList, fetchQuota } from './server/lib/zhihu.js';
 import { NUOCI_ANSWERS, NUOCI_META } from './server/lib/nuociDataset.js';
 import { EXISTENCE_MATCH, EXISTENCE_KEYWORD, EXISTENCE_ANSWER, EXISTENCE_CARDS, EXISTENCE_VISUAL_CARDS, EXISTENCE_COACH_OPENING } from './server/lib/existenceDataset.js';
 import { KAOYAN_MATCH, KAOYAN_KEYWORD, KAOYAN_ANSWER, KAOYAN_MAP, KAOYAN_COACH_OPENING } from './server/lib/kaoyanDataset.js';
@@ -43,10 +44,13 @@ async function loadBaked(name) {
 
 // 炼金管线结果缓存：相同输入二次点击直接命中，稳定且更快
 const ALCHEMY_TTL_MS = 60 * 60 * 1000;
-function alchemyCacheKey({ url = '', text = '', search = '', goal = '入门' } = {}) {
+function alchemyCacheKey({ url = '', text = '', search = '', goal = '入门', answerIds = null } = {}) {
   const raw = String(search || url || text || '').trim();
   if (!raw) return null;
-  return `alchemy:${goal}:${raw}`;
+  const selection = Array.isArray(answerIds)
+    ? [...new Set(answerIds.map((id) => String(id)))].sort().join(',').replace(/[^\w,-]/g, '')
+    : '';
+  return `alchemy:${goal}:${raw}:selection=${selection}`;
 }
 import { generateVisualCards } from './server/lib/visualCards.mjs';
 import { cacheGet, cacheSet } from './server/lib/cache.mjs';
@@ -134,7 +138,11 @@ function pipelineToPkg({ pipeline, goal, sourceUrl, title, kind = 'pipeline' }) 
     reviewPlan: createReviewPlan(pkgCards),
     recreation: null,
     pipeline: true,
-    notices: pipeline.notices,
+    sourceQuery: pipeline.source?.query || '',
+    notices: [
+      ...(pipeline.notices || []),
+      ...(pipeline.source?.notice ? [pipeline.source.notice] : []),
+    ],
     degraded: pipeline.degraded,
     sourceAnswers: pipeline.sourceAnswers,
     viewpoint: pipeline.outputs.viewpoint,
@@ -331,8 +339,37 @@ app.post('/api/oauth/logout', asyncRoute(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// 关键词搜索预览：先看优质帖子、作者、原文链接与各问题数量比例，再决定炼哪些
+app.post('/api/zhihu/search-preview', asyncRoute(async (req, res) => {
+  const query = String(req.body?.query || '').trim();
+  if (!query) {
+    res.status(400).json({ ok: false, error: '请输入要搜索的问题' });
+    return;
+  }
+  const data = await previewSearch(query, { count: 10 });
+  res.json({ ok: true, ...data });
+}));
+
+// 知乎热榜：全员共享一份 24h 缓存（热榜每日额度极小），服务端单飞
+app.get('/api/zhihu/hot', asyncRoute(async (req, res) => {
+  const limit = Math.min(30, Math.max(1, Number(req.query.limit) || 8));
+  const data = await fetchHotList({ limit });
+  res.json({
+    ok: true,
+    demo: Boolean(data.demo),
+    notice: data.notice || null,
+    items: (data.items || []).slice(0, limit),
+  });
+}));
+
+// 开放平台剩余额度（60s 缓存，仅用于前端提示，不阻断任何业务）
+app.get('/api/zhihu/quota', asyncRoute(async (req, res) => {
+  const data = await fetchQuota();
+  res.json({ ok: true, ...data });
+}));
+
 app.post('/api/alchemy', asyncRoute(async (req, res) => {
-  const { url = '', text = '', search = '', goal = '入门' } = req.body || {};
+  const { url = '', text = '', search = '', goal = '入门', answerIds = null } = req.body || {};
   const hasInput = Boolean(String(search || url || text).trim());
   if (!hasInput) {
     res.status(400).json({ ok: false, error: '请粘贴链接或正文' });
@@ -363,7 +400,7 @@ app.post('/api/alchemy', asyncRoute(async (req, res) => {
   let builtinName = null;
 
   // 命中缓存则直接复用管线结果（跳过 LLM），二次炼金瞬时完成
-  const cacheKey = alchemyCacheKey({ url, text, search, goal });
+  const cacheKey = alchemyCacheKey({ url, text, search, goal, answerIds });
   const cached = cacheKey ? cacheGet(cacheKey) : null;
   if (!cached) {
     send({ progress: 4, step: 'quench', status: '正在准备炼金原料' });
@@ -388,7 +425,8 @@ app.post('/api/alchemy', asyncRoute(async (req, res) => {
         });
         pipeline.source = { demo: false, notice: null, count: 1, builtinName: 'existence' };
       } else {
-        pipeline = await runPipelineFromSource(term, { fetchOptions: { limit: 10 }, onProgress });
+        // 关键词：单次知乎搜索 + 按问题聚合；用户在预览中勾选后只炼所选帖子
+        pipeline = await runPipelineFromSearch(term, { answerIds, onProgress });
       }
       sourceUrl = '';
     } else if (url && !text) {

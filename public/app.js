@@ -89,6 +89,7 @@ const state = {
     contents: { items: [], offset: '0', end: false, loaded: false, loading: false },
     favlistsLoaded: false,
   },
+  searchPreview: { query: '', items: [], groups: [], selected: new Set(), demo: false, loading: false },
   pkg: null,
   exampleSearch: false,
   exampleSearchKey: null,
@@ -425,6 +426,7 @@ function showEmpty() {
   $('#packagePage').hidden = true;
   $('#skeleton').hidden = true;
   $('#profileView').hidden = true;
+  $('#searchPreview').hidden = true;
   $('#homeView').hidden = false;
 }
 
@@ -606,6 +608,50 @@ function representatives(pkg, sourceIds) {
     .filter(Boolean);
 }
 
+function sourceAnswerMap(pkg) {
+  const map = new Map();
+  for (const answer of pkg.sourceAnswers || []) {
+    map.set(String(answer.answerId), answer);
+  }
+  return map;
+}
+
+function stanceSourceLinks(pkg, sourceIds) {
+  const map = sourceAnswerMap(pkg);
+  const links = [];
+  for (const id of new Set((sourceIds || []).map(String))) {
+    const answer = map.get(id);
+    if (answer?.url) {
+      links.push(
+        `<a class="stance-source-link" href="${escapeHtml(answer.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(answer.author || '原文')} ↗</a>`,
+      );
+    }
+  }
+  if (!links.length) return '';
+  return `<div class="stance-sources"><strong>原始回答</strong><span>${links.slice(0, 3).join('')}</span></div>`;
+}
+
+function renderSourceReferences(pkg) {
+  const answers = (pkg.sourceAnswers || []).filter((answer) => answer.url || answer.author);
+  if (!answers.length) return '';
+  return `
+    <div class="source-references">
+      <h3 class="section-title">参考来源（${answers.length} 条知乎内容）</h3>
+      <div class="source-list">
+        ${answers
+          .slice(0, 10)
+          .map((answer) => `
+            <a class="source-item" href="${escapeHtml(answer.url || '#')}" ${answer.url ? 'target="_blank" rel="noopener noreferrer"' : ''}>
+              <span class="source-author">${escapeHtml(answer.author || '知乎用户')}</span>
+              <span class="source-title">${escapeHtml(answer.title || '知乎内容')}</span>
+              <span class="source-meta">${Number(answer.voteCount || 0).toLocaleString()} 赞同</span>
+            </a>`)
+          .join('')}
+      </div>
+      <p class="sample-note">观点与卡片均基于知乎搜索摘要生成，完整内容请以原文为准。</p>
+    </div>`;
+}
+
 function applicability(stanceName) {
   const name = String(stanceName || '');
   if (name.includes('加工')) return '适合刚收藏、愿意立即行动的学习者';
@@ -737,6 +783,7 @@ function renderViewpoint() {
             </div>`
           : ''
       }
+      ${renderSourceReferences(pkg)}
     </div>
   `;
 }
@@ -778,6 +825,7 @@ function stanceCard(item, pkg, index) {
             ? `<button class="button ghost" data-args-collapse="${index}">展开更多论据（${extraArguments.length}）</button>`
             : ''
         }
+        ${stanceSourceLinks(pkg, item.source_answer_ids)}
         <div class="stance-apply">适用条件：${escapeHtml(applicability(item.stance_name))}</div>
       </div>
     </div>
@@ -1434,6 +1482,179 @@ async function submitGrade(grade) {
   }
 }
 
+const RATIO_COLORS = ['#0066CC', '#0084FF', '#66B2FF', '#F5A623', '#AF52DE', '#34C759', '#FF6B35', '#5AC8FA'];
+let searchPreviewTimer = null;
+let searchPreviewSeq = 0;
+
+function isHttpInput(value) {
+  return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function isBakedKeyword(value) {
+  const term = String(value || '').trim();
+  // 内置路演样本继续使用预烘焙数据，避免示例点击意外消耗真实 zhihu_search 配额。
+  return term.includes('裸辞') || term.includes('存在主义');
+}
+
+function scheduleSearchPreview(keyword) {
+  clearTimeout(searchPreviewTimer);
+  const panel = $('#searchPreview');
+  const term = String(keyword || '').trim();
+  if (!term || isHttpInput(term) || term.length < 2 || isBakedKeyword(term)) {
+    searchPreviewSeq += 1;
+    panel.hidden = true;
+    return;
+  }
+  // 知乎搜索日配额很小：用户停止输入 700ms 后只发 1 次请求，服务端还会做 24h 精确缓存。
+  searchPreviewTimer = setTimeout(() => {
+    openSearchPreview(term);
+  }, 700);
+}
+
+async function openSearchPreview(keyword) {
+  const term = String(keyword || '').trim();
+  if (!term || isHttpInput(term) || isBakedKeyword(term)) return;
+  const panelAlreadyVisible = !$('#searchPreview').hidden;
+  if (panelAlreadyVisible && state.searchPreview.query === term && state.searchPreview.items.length) return;
+
+  const panel = $('#searchPreview');
+  const list = $('#previewList');
+  const btn = $('#alchemyBtn');
+  const seq = ++searchPreviewSeq;
+  panel.hidden = false;
+  list.innerHTML = '<div class="empty-inline">正在从知乎抓取相关优质内容…</div>';
+  $('#ratioBar').innerHTML = '';
+  $('#ratioLegend').innerHTML = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setLoading(btn, true, '搜索中...');
+  try {
+    const data = await api('/api/zhihu/search-preview', {
+      method: 'POST',
+      body: JSON.stringify({ query: term }),
+    });
+    if (seq !== searchPreviewSeq) return;
+    state.searchPreview = {
+      query: data.query || term,
+      items: data.items || [],
+      groups: data.groups || [],
+      selected: new Set((data.items || []).slice(0, 8).map((item) => String(item.answerId))),
+      demo: Boolean(data.demo),
+      notice: data.notice || '',
+      loading: false,
+    };
+    renderSearchPreview();
+  } catch (error) {
+    if (seq !== searchPreviewSeq) return;
+    $('#ratioBar').innerHTML = '';
+    $('#ratioLegend').innerHTML = '';
+    list.innerHTML = `<div class="empty-inline">${escapeHtml(error.message)}</div>`;
+  } finally {
+    if (seq === searchPreviewSeq) setLoading(btn, false);
+  }
+}
+
+function renderSearchPreview() {
+  const preview = state.searchPreview;
+  $('#previewMeta').textContent = `共 ${preview.items.length} 条 · 来自 ${preview.groups.length} 个问题 · 按质量排序`;
+  const notice = $('#previewNotice');
+  if (preview.notice || preview.demo) {
+    notice.hidden = false;
+    notice.textContent = preview.notice || '当前为演示数据';
+  } else {
+    notice.hidden = true;
+  }
+
+  // 按所属问题的数量比例渲染堆叠条与图例
+  const bar = $('#ratioBar');
+  const legend = $('#ratioLegend');
+  if (preview.groups.length && preview.items.length) {
+    bar.innerHTML = preview.groups.map((group, index) => {
+      const color = RATIO_COLORS[index % RATIO_COLORS.length];
+      return `<i style="width:${group.ratio * 100}%;background:${color}" title="${escapeHtml(group.title)} ${group.count} 条"></i>`;
+    }).join('');
+    legend.innerHTML = preview.groups.map((group, index) => {
+      const color = RATIO_COLORS[index % RATIO_COLORS.length];
+      const pct = Math.round(group.ratio * 100);
+      const link = group.sampleUrl
+        ? `<a href="${escapeHtml(group.sampleUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(group.title)}</a>`
+        : escapeHtml(group.title);
+      return `<span class="ratio-item"><b style="background:${color}"></b>${link}<em>${group.count} 条 · ${pct}%</em></span>`;
+    }).join('');
+  } else {
+    bar.innerHTML = '';
+    legend.innerHTML = '';
+  }
+
+  const list = $('#previewList');
+  list.innerHTML = preview.items.map((item) => {
+    const id = String(item.answerId);
+    const checked = preview.selected.has(id) ? 'checked' : '';
+    const typeLabel = { answer: '回答', article: '文章', zvideo: '视频', pin: '想法', question: '问题' }[item.contentType] || '内容';
+    return `
+      <label class="preview-item" data-preview-id="${escapeHtml(id)}">
+        <input type="checkbox" ${checked} data-preview-check="${escapeHtml(id)}">
+        <span class="preview-body">
+          <span class="preview-line1">
+            <span class="preview-type">${escapeHtml(typeLabel)}</span>
+            <a class="preview-title" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener noreferrer" data-preview-link>${escapeHtml(item.title || '知乎内容')}</a>
+          </span>
+          <span class="preview-summary">${escapeHtml(item.summary || item.content || '')}</span>
+          <span class="preview-foot">
+            <span class="preview-author">作者：${escapeHtml(item.author || '知乎用户')}</span>
+            <span class="preview-votes">▲ ${Number(item.voteCount || 0).toLocaleString()} 赞同</span>
+          </span>
+        </span>
+      </label>`;
+  }).join('');
+  updatePreviewSelection();
+}
+
+function updatePreviewSelection() {
+  const count = state.searchPreview.selected.size;
+  const btn = $('#previewRunBtn');
+  btn.disabled = count === 0;
+  btn.textContent = count ? `用选中的 ${count} 条内容开炼` : '请至少选择 1 条';
+}
+
+async function loadHotList() {
+  const box = $('#hotList');
+  const hint = $('#hotHint');
+  if (!box) return;
+  try {
+    const data = await api('/api/zhihu/hot?limit=8');
+    const items = data.items || [];
+    if (!items.length) {
+      box.innerHTML = '<div class="empty-inline">今日热榜暂不可用</div>';
+      if (hint) hint.textContent = '';
+      return;
+    }
+    box.innerHTML = items
+      .map(
+        (item, index) => `
+          <button class="hot-item" data-hot-query="${escapeHtml(item.title)}" title="${escapeHtml(item.summary || item.title)}">
+            <span class="hot-rank">${index + 1}</span>
+            <span class="hot-text">
+              <strong>${escapeHtml(item.title)}</strong>
+              <small>${escapeHtml(item.summary || '点击用这个议题开炼')}</small>
+            </span>
+          </button>`,
+      )
+      .join('');
+    if (hint) {
+      hint.textContent = data.demo ? '演示数据' : '来自知乎热榜（全站共享缓存）';
+    }
+  } catch (error) {
+    box.innerHTML = '<div class="empty-inline">热榜加载失败，可直接输入关键词</div>';
+  }
+}
+
+function alchemizeKeyword(keyword) {
+  const input = $('#sourceInput');
+  input.value = keyword;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  startAlchemy();
+}
+
 async function loadHistory() {
   try {
     const data = await api('/api/packages');
@@ -1640,14 +1861,26 @@ async function startAlchemy() {
     toast('先把知乎链接或内容贴进来吧～');
     return;
   }
-  let payload;
-  if (state.exampleSearch && input === EXAMPLES[state.exampleSearchKey]?.input) {
-    payload = { search: input };
+  if (isHttpInput(input)) {
+    await runAlchemy({ url: input });
+  } else if (isBakedKeyword(input)) {
+    await runAlchemy({ search: input });
+  } else if (
+    !$('#searchPreview').hidden &&
+    state.searchPreview.query === input &&
+    state.searchPreview.items.length
+  ) {
+    // 预览已经展开时，顶部主按钮尊重用户当前勾选，直接生成学习包。
+    const ids = [...state.searchPreview.selected];
+    if (ids.length) await runAlchemy({ search: input, answerIds: ids });
+    else await openSearchPreview(input);
   } else {
-    payload = /^https?:\/\//i.test(input) ? { url: input } : { text: input };
+    // 非链接一律作为问题关键词：先抓优质帖子预览（作者/原文/比例），勾选后再炼金
+    await openSearchPreview(input);
   }
-  state.exampleSearch = false;
-  state.exampleSearchKey = null;
+}
+
+async function runAlchemy(payload) {
   const btn = $('#alchemyBtn');
   showAlchemyOverlay();
   setLoading(btn, true, '炼金中...');
@@ -1655,6 +1888,7 @@ async function startAlchemy() {
   try {
     const data = await streamAlchemy({ ...payload, goal: state.goal }, progress);
     await progress.finish();
+    $('#searchPreview').hidden = true;
     renderPackage(data.pkg);
     toast(data.pkg.notices?.length ? '已生成，部分模块降级为占位结果' : '炼金完成');
     loadHistory();
@@ -1798,6 +2032,53 @@ function bindEvents() {
   });
 
   $('#alchemyBtn').addEventListener('click', startAlchemy);
+  $('#sourceInput').addEventListener('input', (event) => {
+    scheduleSearchPreview(event.target.value);
+  });
+  $('#sourceInput').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      clearTimeout(searchPreviewTimer);
+      startAlchemy();
+    }
+  });
+
+  const hotList = $('#hotList');
+  if (hotList) {
+    hotList.addEventListener('click', (event) => {
+      const item = event.target.closest('[data-hot-query]');
+      if (item) alchemizeKeyword(item.dataset.hotQuery);
+    });
+  }
+
+  const previewList = $('#previewList');
+  if (previewList) {
+    previewList.addEventListener('change', (event) => {
+      const checkbox = event.target.closest('[data-preview-check]');
+      if (!checkbox) return;
+      const id = checkbox.dataset.previewCheck;
+      if (checkbox.checked) state.searchPreview.selected.add(id);
+      else state.searchPreview.selected.delete(id);
+      updatePreviewSelection();
+    });
+    // 点链接不被勾选拦截
+    previewList.addEventListener('click', (event) => {
+      if (event.target.closest('[data-preview-link]')) event.stopPropagation();
+    });
+  }
+  $('#previewSelectAll')?.addEventListener('click', () => {
+    state.searchPreview.selected = new Set(state.searchPreview.items.map((item) => String(item.answerId)));
+    renderSearchPreview();
+  });
+  $('#previewClear')?.addEventListener('click', () => {
+    state.searchPreview.selected = new Set();
+    renderSearchPreview();
+  });
+  $('#previewRunBtn')?.addEventListener('click', () => {
+    const ids = [...state.searchPreview.selected];
+    if (!ids.length) return;
+    runAlchemy({ search: state.searchPreview.query, answerIds: ids });
+  });
 
   $('#userMenuBtn').addEventListener('click', () => {
     openProfile();
@@ -2394,6 +2675,7 @@ async function init() {
   if (params.get('oauth') === 'failed') toast('知乎登录未完成，请检查部署与回调配置');
   await refreshOauth();
   await loadHistory();
+  loadHotList();
 }
 
 init();

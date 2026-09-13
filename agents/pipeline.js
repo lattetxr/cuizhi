@@ -7,7 +7,7 @@ import {
   buildSourceContext,
   normalizeAnswers,
 } from './context.js';
-import { fetchContent } from '../server/lib/zhihu.js';
+import { fetchContent, searchForAlchemy, previewSearch } from '../server/lib/zhihu.js';
 
 // 管线各阶段的真实进度锚点：前端据此渲染进度条，保证与 LLM 实际耗时一致
 export const PIPELINE_PHASES = {
@@ -114,6 +114,29 @@ export async function runPipelineFromSource(questionIdOrUrl, options = {}) {
     },
   };
 }
+
+export async function runPipelineFromSearch(query, options = {}) {
+  const { onProgress, answerIds = null } = options;
+  const emit = (phase) => {
+    if (typeof onProgress === 'function') onProgress(phase);
+  };
+  emit(PIPELINE_PHASES.prepare);
+  // 只打 1 次知乎搜索（内部 24h 缓存），按问题聚合保证立场多样性
+  const answers = await searchForAlchemy(String(query || '').trim(), { limit: 8, answerIds });
+  const result = await runPipeline({ answers, onProgress });
+  return {
+    ...result,
+    source: {
+      demo: answers.demo || false,
+      notice: answers.notice || null,
+      count: answers.length,
+      query: answers.query || String(query || '').trim(),
+      questionCount: answers.questionCount || 0,
+    },
+  };
+}
+
+export { previewSearch };
 
 export async function runCoachTurn({ answers, messages = [], mode = 'chat' }) {
   const result = await coachAgent.run({ answers, messages, mode });
