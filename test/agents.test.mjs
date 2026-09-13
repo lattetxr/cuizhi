@@ -111,7 +111,7 @@ test('单 Agent 失败时管线降级但输出仍合法', async () => {
   const result = await runPipeline({ answers: ANSWERS });
   assert.equal(result.ok, true);
   assert.ok(Object.keys(result.degraded).length >= 1);
-  assert.ok(result.notices.length >= 1);
+  assert.deepEqual(result.notices, []);
   assert.equal(validateSchema('viewpoint', result.outputs.viewpoint).valid, true);
   assert.equal(validateSchema('map', result.outputs.map).valid, true);
   assert.equal(validateSchema('cards', result.outputs.cards).valid, true);
@@ -123,7 +123,7 @@ test('runPipelineFromSource 在无凭证时走 Mock 并保留提示', async () =
   });
   assert.equal(result.ok, true);
   assert.equal(result.source.demo, true);
-  assert.match(result.source.notice, /当前为演示数据/);
+  assert.match(result.source.notice, /示例内容/);
   assert.ok(result.source.count >= 5);
   assert.ok(Object.keys(result.outputs).length === 3);
 });

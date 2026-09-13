@@ -21,6 +21,12 @@ function dedupe(key, producer) {
 const DEFAULT_TIMEOUT_MS = 10000;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+const SAMPLE_CONTENT_NOTICE = '当前展示示例内容，你可以换个关键词或链接后重试';
+const SAMPLE_HOT_NOTICE = '暂时无法获取今日热榜，先为你展示示例热榜';
+const SAMPLE_FAVORITES_NOTICE = '暂时无法读取收藏夹，先为你展示示例内容';
+const ZHIDA_SAMPLE_ANSWER = '我们可以先明确核心问题，再拆分关键概念、补充不同视角和案例，最后整理成可执行的结论。';
+const ZHIDA_UNAVAILABLE_ANSWER = '暂时无法获得知乎直答结果，请稍后再试。';
+
 export class ZhihuError extends Error {
   constructor(code, message, { status = 0, retryable = false } = {}) {
     super(message);
@@ -373,7 +379,7 @@ export async function fetchContent(questionIdOrUrl, { limit = 10 } = {}) {
       cloneWithMeta(items, {
         demo: true,
         source: 'mock',
-        notice: '当前为演示数据',
+        notice: SAMPLE_CONTENT_NOTICE,
       }),
       CACHE_TTL_MS,
     );
@@ -434,8 +440,7 @@ export async function fetchContent(questionIdOrUrl, { limit = 10 } = {}) {
       cloneWithMeta(items, {
         demo: true,
         source: 'mock',
-        notice: `当前为演示数据（真实请求失败：${error.code || 'UNKNOWN'}）`,
-        error: error.message,
+        notice: SAMPLE_CONTENT_NOTICE,
       }),
       CACHE_TTL_MS,
     );
@@ -493,7 +498,7 @@ export async function fetchFavorites(accessToken, { limit = 20, contentsPerList 
       cloneWithMeta(result, {
         demo: true,
         source: 'mock',
-        notice: '当前为演示数据',
+        notice: SAMPLE_FAVORITES_NOTICE,
       }),
       CACHE_TTL_MS,
     );
@@ -543,9 +548,9 @@ export async function fetchFavorites(accessToken, { limit = 20, contentsPerList 
       favlists: [
         {
           urlToken: 'mock-fav-1',
-          title: '学习系统（演示数据）',
+          title: '学习系统',
           url: 'https://www.zhihu.com/collection/mock-1',
-          description: '真实请求失败后的 Mock 兜底',
+          description: '关于学习方法和知识管理的收藏',
           contents: [
             {
               title: '如何高效地学习一个领域的知识？',
@@ -562,8 +567,7 @@ export async function fetchFavorites(accessToken, { limit = 20, contentsPerList 
       cloneWithMeta(result, {
         demo: true,
         source: 'mock',
-        notice: `当前为演示数据（真实请求失败：${error.code || 'UNKNOWN'}）`,
-        error: error.message,
+        notice: SAMPLE_FAVORITES_NOTICE,
       }),
       CACHE_TTL_MS,
     );
@@ -576,7 +580,7 @@ export async function searchZhihu(query, { count = 10 } = {}) {
   if (cached) return cloneWithMeta(cached, { fromCache: true });
   const access = getHttpAccessSecret();
   if (shouldUseMock() || !access.value) {
-    return cacheSet(cacheKey, { demo: true, notice: '当前为演示数据', items: mockAnswerList() });
+    return cacheSet(cacheKey, { demo: true, notice: SAMPLE_CONTENT_NOTICE, items: mockAnswerList() });
   }
   try {
     const data = await requestJson(SEARCH_PATH, {
@@ -592,7 +596,7 @@ export async function searchZhihu(query, { count = 10 } = {}) {
   } catch (error) {
     return cacheSet(cacheKey, {
       demo: true,
-      notice: `当前为演示数据（真实请求失败：${error.code || 'UNKNOWN'}）`,
+      notice: SAMPLE_CONTENT_NOTICE,
       items: mockAnswerList(),
     });
   }
@@ -610,7 +614,7 @@ async function fetchHotListInner({ limit = 20 } = {}) {
   if (shouldUseMock() || !access.value) {
     return cacheSet(cacheKey, {
       demo: true,
-      notice: '当前为演示数据',
+      notice: SAMPLE_HOT_NOTICE,
       items: mockAnswerList().slice(0, 5).map((item) => ({
         title: item.title,
         url: item.url,
@@ -637,7 +641,7 @@ async function fetchHotListInner({ limit = 20 } = {}) {
   } catch (error) {
     return cacheSet(cacheKey, {
       demo: true,
-      notice: `当前为演示数据（真实请求失败：${error.code || 'UNKNOWN'}）`,
+      notice: SAMPLE_HOT_NOTICE,
       items: [],
     });
   }
@@ -648,8 +652,8 @@ export async function zhidaAnswer(messages, { model = 'zhida-fast-1p5' } = {}) {
   if (shouldUseMock() || !access.value) {
     return {
       demo: true,
-      notice: '当前为演示数据',
-      answer: '这是演示模式下的直答结果：先明确核心问题，再拆概念、做案例、完成输出。',
+      notice: null,
+      answer: ZHIDA_SAMPLE_ANSWER,
     };
   }
   try {
@@ -665,8 +669,8 @@ export async function zhidaAnswer(messages, { model = 'zhida-fast-1p5' } = {}) {
   } catch (error) {
     return {
       demo: true,
-      notice: `当前为演示数据（真实请求失败：${error.code || 'UNKNOWN'}）`,
-      answer: '演示模式下无法完成真实直答，请检查 Access Secret 与网络。',
+      notice: ZHIDA_UNAVAILABLE_ANSWER,
+      answer: ZHIDA_UNAVAILABLE_ANSWER,
     };
   }
 }
@@ -762,10 +766,10 @@ export async function searchForAlchemy(query, { limit = 8, answerIds = null } = 
   let demo = Boolean(result.demo);
   let notice = result.notice || null;
   if (picked.length === 0) {
-    // 真实搜索 0 条：降级为演示数据，保证炼金管线可运行并明确提示
+    // 真实搜索 0 条时补充示例内容，保证学习包生成流程可继续。
     picked.push(...mockAnswerList().slice(0, 5));
     demo = true;
-    notice = notice || '没有搜到相关知乎内容，已切换为演示数据，换个关键词试试';
+    notice = notice || SAMPLE_CONTENT_NOTICE;
   }
   return Object.assign(picked, {
     demo,

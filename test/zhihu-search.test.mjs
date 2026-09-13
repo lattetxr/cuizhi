@@ -73,10 +73,10 @@ test('同一问题的多个回答聚合在一组，不同问题轮转取样保�
   }
 });
 
-test('真实搜索 0 条时降级演示数据并给出提示', async () => {
+test('真实搜索 0 条时补充示例内容并给出友好提示', async () => {
   __setTransport(makeTransport([]));
   const result = await searchForAlchemy('不存在的生僻词xyz', { limit: 8 });
   assert.equal(result.demo, true);
-  assert.match(result.notice, /演示数据/);
+  assert.match(result.notice, /示例内容/);
   assert.ok(result.length >= 1);
 });

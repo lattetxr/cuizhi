@@ -39,7 +39,7 @@ test('Mock fetchContent 返回 ≥5 条且字段完整', async () => {
   assert.equal(Array.isArray(items), true);
   assert.ok(items.length >= 5);
   assert.equal(items.demo, true);
-  assert.match(items.notice, /当前为演示数据/);
+  assert.match(items.notice, /当前展示示例内容/);
   for (const item of items) {
     for (const field of [
       'answerId',
@@ -59,16 +59,16 @@ test('Mock fetchContent 返回 ≥5 条且字段完整', async () => {
   }
 });
 
-test('Mock 缓存命中仍保留演示数据标记', async () => {
+test('Mock 缓存命中仍保留示例内容标记', async () => {
   const first = await fetchContent('https://www.zhihu.com/question/888888');
   const second = await fetchContent('https://www.zhihu.com/question/888888');
   assert.equal(second.fromCache, true);
   assert.equal(second.demo, true);
-  assert.match(second.notice, /当前为演示数据/);
+  assert.match(second.notice, /当前展示示例内容/);
   assert.equal(first.length, second.length);
 });
 
-test('断网时真实请求回退 Mock 并提示演示数据', async () => {
+test('断网时真实请求回退示例内容且不暴露内部错误', async () => {
   process.env.CUIZHI_ZHIHU_MODE = 'auto';
   process.env.ZHIHU_ACCESS_SECRET = REAL_SECRET;
   __setTransport(() => {
@@ -77,8 +77,8 @@ test('断网时真实请求回退 Mock 并提示演示数据', async () => {
   const items = await fetchContent('365536909');
   assert.equal(Array.isArray(items), true);
   assert.equal(items.demo, true);
-  assert.match(items.notice, /当前为演示数据/);
-  assert.match(items.error, /network down/i);
+  assert.match(items.notice, /当前展示示例内容/);
+  assert.equal(items.error, undefined);
 });
 
 test('相同 key 第二次调用命中缓存且不产生网络请求', async () => {
@@ -121,7 +121,7 @@ test('相同 key 第二次调用命中缓存且不产生网络请求', async () 
 test('Mock fetchFavorites 返回收藏夹与内容', async () => {
   const result = await fetchFavorites('oauth-token');
   assert.equal(result.demo, true);
-  assert.match(result.notice, /当前为演示数据/);
+  assert.match(result.notice, /暂时无法读取收藏夹/);
   assert.ok(result.favlists.length >= 1);
   assert.ok(result.favlists[0].contents.length >= 1);
 });

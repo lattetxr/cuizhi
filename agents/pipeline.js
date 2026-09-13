@@ -45,6 +45,8 @@ export async function runPipeline({ answers, options = {}, prefilled = {}, onPro
     if (typeof onProgress === 'function') onProgress(phase);
   };
   const degraded = {};
+  // C 端不展示 agent/viewpoint/map/cards、降级、占位结果等实现细节。
+  // 具体失败模块仅保留在 degraded 中供内部诊断，页面使用统一的产品化兜底体验。
   const notices = [];
 
   async function runStep(name, agent, input) {
@@ -54,7 +56,6 @@ export async function runPipeline({ answers, options = {}, prefilled = {}, onPro
       return sanitizeIds(result.data, allowed);
     } catch (error) {
       degraded[name] = error.message || String(error);
-      notices.push(`${name} 已降级为占位结果`);
       const ctx = buildSourceContext(input.answers || normalized);
       return sanitizeIds(
         agent.mock({ ...input, _degraded: true }, ctx),

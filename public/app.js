@@ -251,13 +251,19 @@ function renderProfileHeader() {
     modeChip.textContent = '知乎授权';
     modeChip.className = 'chip ok';
   } else if (identity?.mode === 'direct') {
-    modeChip.textContent = '直连模式';
-    modeChip.className = 'chip deploy';
+    modeChip.textContent = '内容体验';
+    modeChip.className = 'chip';
   } else {
     modeChip.textContent = '未登录';
     modeChip.className = 'chip';
   }
-  $('#profileStateWarn').hidden = !(identity?.mode === 'oauth' && identity.stateVerified === false);
+  const stateWarn = $('#profileStateWarn');
+  if (identity?.mode === 'oauth' && identity.stateVerified === false) {
+    stateWarn.textContent = '为保障账号安全，建议重新完成知乎授权';
+    stateWarn.hidden = false;
+  } else {
+    stateWarn.hidden = true;
+  }
   $('#profileLoginBtn').hidden = identity?.mode !== 'direct';
   $('#profileLogoutBtn').hidden = identity?.mode !== 'oauth';
 }
@@ -1522,7 +1528,7 @@ async function openSearchPreview(keyword) {
   const btn = $('#alchemyBtn');
   const seq = ++searchPreviewSeq;
   panel.hidden = false;
-  list.innerHTML = '<div class="empty-inline">正在从知乎抓取相关优质内容…</div>';
+  list.innerHTML = '<div class="empty-inline">正在查找知乎相关优质内容…</div>';
   $('#ratioBar').innerHTML = '';
   $('#ratioLegend').innerHTML = '';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1559,7 +1565,7 @@ function renderSearchPreview() {
   const notice = $('#previewNotice');
   if (preview.notice || preview.demo) {
     notice.hidden = false;
-    notice.textContent = preview.notice || '当前为演示数据';
+    notice.textContent = preview.notice || '当前展示示例内容，你可以换个关键词后重试';
   } else {
     notice.hidden = true;
   }
@@ -1645,11 +1651,11 @@ async function loadHotList() {
       )
       .join('');
     if (hint) {
-      hint.textContent = data.demo ? '演示数据' : '来自知乎热榜（全站共享缓存）';
+      hint.textContent = data.demo ? '示例热榜' : '来自知乎热榜';
     }
   } catch (error) {
     box.classList.add('hot-list-placeholder');
-    box.innerHTML = '<div class="empty-inline">热榜加载失败，可直接输入关键词</div>';
+    box.innerHTML = '<div class="empty-inline">热榜暂时没有加载成功，可直接输入关键词</div>';
   }
 }
 
@@ -1862,12 +1868,8 @@ async function streamAlchemy(payload, progressCtrl) {
     body: JSON.stringify(payload),
   });
   if (!response.ok || !response.body) {
-    let detail = `请求失败（${response.status}）`;
-    try {
-      const err = await response.json();
-      if (err?.error) detail = err.error;
-    } catch { /* ignore */ }
-    throw new Error(detail);
+    await response.body?.cancel?.().catch(() => {});
+    throw new Error('炼金暂时没有成功，请稍后再试');
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -1930,7 +1932,7 @@ async function runAlchemy(payload) {
     await progress.finish();
     $('#searchPreview').hidden = true;
     renderPackage(data.pkg);
-    toast(data.pkg.notices?.length ? '已生成，部分模块降级为占位结果' : '炼金完成');
+    toast('炼金完成');
     loadHistory();
   } catch (error) {
     console.error(error);
@@ -2150,7 +2152,7 @@ function bindEvents() {
 
   $('#loginBtn').addEventListener('click', () => {
     if (state.oauth?.oauth?.waitingForDeploy) {
-      toast('等待部署：本地地址无法完成真实知乎登录');
+      toast('知乎登录暂不可用，请稍后再试');
       return;
     }
     window.location.href = '/auth/login';
@@ -2163,7 +2165,7 @@ function bindEvents() {
       return;
     }
     if (oauth?.waitingForDeploy) {
-      toast('等待部署：本地地址无法完成真实知乎登录');
+      toast('知乎登录暂不可用，请稍后再试');
       return;
     }
     window.location.href = '/auth/login';
@@ -2715,9 +2717,9 @@ async function init() {
   hideAlchemyOverlay();
   const params = new URLSearchParams(window.location.search);
   if (params.get('oauth') === 'success') {
-    toast(params.get('stateVerified') === '0' ? '知乎登录成功（本次未回传 state，仅适合临时联调）' : '知乎登录成功', 4200);
+    toast('知乎登录成功', 4200);
   }
-  if (params.get('oauth') === 'failed') toast('知乎登录未完成，请检查部署与回调配置');
+  if (params.get('oauth') === 'failed') toast('知乎登录暂未完成，请稍后再试');
   await refreshOauth();
   await loadHistory();
 }

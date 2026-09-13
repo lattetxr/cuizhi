@@ -89,7 +89,8 @@ app.use(
 function asyncRoute(fn) {
   return (req, res) => {
     Promise.resolve(fn(req, res)).catch((error) => {
-      res.status(500).json({ ok: false, error: error.message || '服务器内部错误' });
+      console.error('[request failed]', error);
+      res.status(500).json({ ok: false, error: '服务暂时不可用，请稍后再试' });
     });
   };
 }
@@ -139,10 +140,9 @@ function pipelineToPkg({ pipeline, goal, sourceUrl, title, kind = 'pipeline' }) 
     recreation: null,
     pipeline: true,
     sourceQuery: pipeline.source?.query || '',
-    notices: [
-      ...(pipeline.notices || []),
-      ...(pipeline.source?.notice ? [pipeline.source.notice] : []),
-    ],
+    notices: pipeline.source?.demo
+      ? ['当前展示示例内容，你可以换个关键词或链接后重新生成']
+      : [],
     degraded: pipeline.degraded,
     sourceAnswers: pipeline.sourceAnswers,
     viewpoint: pipeline.outputs.viewpoint,
@@ -151,6 +151,22 @@ function pipelineToPkg({ pipeline, goal, sourceUrl, title, kind = 'pipeline' }) 
   };
   pkg.reviewPlan.progress = packageProgress(pkg);
   return pkg;
+}
+
+
+function publicPackageNotices(pkg = {}) {
+  const notices = Array.isArray(pkg.notices) ? pkg.notices : [];
+  const hasDemoContent = notices.some((notice) => /演示数据|示例内容/.test(String(notice)));
+  return hasDemoContent ? ['当前展示示例内容，你可以换个关键词或链接后重新生成'] : [];
+}
+
+function presentPackage(pkg) {
+  if (!pkg) return pkg;
+  const { degraded: _internalDegraded, ...publicPkg } = pkg;
+  return {
+    ...publicPkg,
+    notices: publicPackageNotices(pkg),
+  };
 }
 
 function readCookie(req, name) {
@@ -171,7 +187,7 @@ function requireSession(req, res) {
 const DIRECT_PROFILE = {
   name: '知乎账号',
   avatarUrl: null,
-  headline: '内置 Access Secret 直连模式',
+  headline: '授权后可同步你的关注、创作与收藏夹',
   url: null,
 };
 
@@ -211,10 +227,9 @@ app.get('/api/health', (req, res) => {
 app.get('/api/oauth/status', asyncRoute(async (req, res) => {
   const appId = String(config.oauth?.appId || '').trim();
   const redirectUri = String(config.oauth?.redirectUri || '').trim();
-  const appKey = await getOAuthAppKey(config).catch(() => ({ value: '', source: null }));
   const access = getHttpAccessSecret();
   const session = getSession(readCookie(req, 'cuizhi_oauth'));
-  const waitingForDeploy = !appId || !isPublicHttps(redirectUri);
+  const loginAvailable = Boolean(appId) && isPublicHttps(redirectUri);
   let identity;
   if (session) {
     identity = {
@@ -233,20 +248,10 @@ app.get('/api/oauth/status', asyncRoute(async (req, res) => {
     ok: true,
     oauth: {
       enabled: config.oauth?.enabled === true,
-      appIdSet: Boolean(appId),
-      redirectUri: redirectUri || null,
-      waitingForDeploy,
-      appKeyConfigured: Boolean(appKey.value),
-      appKeySource: appKey.source,
-      accessSecretConfigured: Boolean(access.value),
-      accessSecretSource: access.source,
+      waitingForDeploy: !loginAvailable,
       authorized: identity.authorized,
       identity,
     },
-    llmMock: isMockMode(),
-    note: waitingForDeploy
-      ? '本地预览只能体验炼金流程，真实知乎登录需部署到公网 HTTPS 并配置回调'
-      : null,
   });
 }));
 
@@ -257,7 +262,7 @@ app.get('/auth/login', asyncRoute(async (req, res) => {
   if (!appId || !isPublicHttps(redirectUri)) {
     res.status(400).json({
       ok: false,
-      error: '等待部署：需要先配置 App ID 与公网 HTTPS 回调地址',
+      error: '知乎登录暂不可用，请稍后再试',
       waitingForDeploy: true,
     });
     return;
@@ -265,7 +270,7 @@ app.get('/auth/login', asyncRoute(async (req, res) => {
   if (!appKey.value) {
     res.status(400).json({
       ok: false,
-      error: 'OAuth App Key 未配置',
+      error: '知乎登录暂不可用，请稍后再试',
     });
     return;
   }
@@ -280,21 +285,21 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
   const redirectUri = String(config.oauth?.redirectUri || '').trim();
   const appId = String(config.oauth?.appId || '').trim();
   if (!code) {
-    res.redirect('/?oauth=failed&reason=no_code');
+    res.redirect('/?oauth=failed');
     return;
   }
   if (!appId || !isPublicHttps(redirectUri)) {
-    res.redirect('/?oauth=failed&reason=not_deployed');
+    res.redirect('/?oauth=failed');
     return;
   }
   const stateVerification = verifyState(state);
   if (!stateVerification.valid) {
-    res.redirect('/?oauth=failed&reason=state_invalid');
+    res.redirect('/?oauth=failed');
     return;
   }
   const appKey = await getOAuthAppKey(config);
   if (!appKey.value) {
-    res.redirect('/?oauth=failed&reason=app_key_missing');
+    res.redirect('/?oauth=failed');
     return;
   }
   try {
@@ -318,10 +323,10 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
     res.clearCookie('cuizhi_logged_out', { path: '/' });
-    const suffix = stateVerification.verified ? '' : '&stateVerified=0';
-    res.redirect(`/?oauth=success${suffix}`);
+    res.redirect('/?oauth=success');
   } catch (error) {
-    res.redirect(`/?oauth=failed&reason=${encodeURIComponent(error.message)}`);
+    console.error('[zhihu login failed]', error);
+    res.redirect('/?oauth=failed');
   }
 }));
 
@@ -534,7 +539,7 @@ app.post('/api/alchemy', asyncRoute(async (req, res) => {
     pkg.coachOpening = KAOYAN_COACH_OPENING;
   }
   await createPackage(pkg);
-  send({ ok: true, progress: 100, mock: pipeline.source.demo || false, pkg });
+  send({ ok: true, progress: 100, mock: pipeline.source.demo || false, pkg: presentPackage(pkg) });
   res.end();
 }));
 
@@ -589,7 +594,7 @@ app.get('/api/packages/:id', asyncRoute(async (req, res) => {
     res.status(404).json({ ok: false, error: '学习包不存在' });
     return;
   }
-  res.json({ ok: true, pkg });
+  res.json({ ok: true, pkg: presentPackage(pkg) });
 }));
 
 app.post('/api/packages/:id/review', asyncRoute(async (req, res) => {
@@ -599,7 +604,7 @@ app.post('/api/packages/:id/review', asyncRoute(async (req, res) => {
     res.status(404).json({ ok: false, error: '学习包不存在' });
     return;
   }
-  res.json({ ok: true, pkg: updated });
+  res.json({ ok: true, pkg: presentPackage(updated) });
 }));
 
 app.post('/api/packages/:id/recreate', asyncRoute(async (req, res) => {
@@ -614,7 +619,7 @@ app.post('/api/packages/:id/recreate', asyncRoute(async (req, res) => {
   }
   const result = await generateRecreation(pkg);
   if (!result.ok) {
-    res.status(502).json({ ok: false, error: result.error });
+    res.status(502).json({ ok: false, error: '暂时无法完成对练，请稍后再试' });
     return;
   }
   const updated = await updatePackage(pkg.id, (item) => ({
@@ -659,7 +664,7 @@ app.get('/api/packages/:id/export-cards', asyncRoute(async (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="cuizhi-${pkg.id}.apkg"`);
       res.type('application/octet-stream').send(Buffer.from(apkg));
     } catch (e) {
-      res.status(500).json({ ok: false, error: `Anki 导出需要 Node.js v22+，当前环境不支持：${e.message}` });
+      res.status(500).json({ ok: false, error: '当前环境暂不支持 Anki 导出，请先使用 Markdown 格式' });
     }
     return;
   }
@@ -683,9 +688,9 @@ app.get('/api/packages/:id/export', asyncRoute(async (req, res) => {
   const filename = `cuizhi-${pkg.id}.${format === 'html' ? 'html' : 'md'}`;
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   if (format === 'html') {
-    res.type('html').send(toHtml(pkg));
+    res.type('html').send(toHtml(presentPackage(pkg)));
   } else {
-    res.type('text/markdown').send(toMarkdown(pkg));
+    res.type('text/markdown').send(toMarkdown(presentPackage(pkg)));
   }
 }));
 
@@ -747,7 +752,7 @@ app.get('/api/me/favlist_contents', asyncRoute(async (req, res) => {
   if (!identity) return;
   const urlToken = String(req.query.FavlistUrlToken || '').trim();
   if (!urlToken) {
-    res.status(400).json({ ok: false, error: '缺少 FavlistUrlToken' });
+    res.status(400).json({ ok: false, error: '收藏夹信息缺失，请返回后重试' });
     return;
   }
   const limit = clampLimit(req.query.Limit, 20);
@@ -814,7 +819,7 @@ app.post('/api/favlists/:urlToken/alchemy', asyncRoute(async (req, res) => {
     kind: 'collection',
   });
   await createPackage(pkg);
-  res.json({ ok: true, mock: false, pkg });
+  res.json({ ok: true, mock: false, pkg: presentPackage(pkg) });
 }));
 
 app.listen(port, host, () => {

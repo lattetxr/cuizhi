@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=11">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -121,7 +121,7 @@
             </div>
             <p id="profileHeadline" class="profile-headline"></p>
             <a id="profileUrl" class="profile-link" target="_blank" rel="noopener noreferrer" hidden>查看知乎主页 ↗</a>
-            <p id="profileStateWarn" class="profile-state-warn" hidden>知乎本次回调未回传 state，登录仅适合临时联调</p>
+            <p id="profileStateWarn" class="profile-state-warn" hidden>为保障账号安全，建议重新完成知乎授权</p>
             <div class="profile-actions">
               <a id="profileLoginBtn" class="button primary" href="/auth/login" hidden>授权知乎账号</a>
               <button id="profileLogoutBtn" class="button danger" hidden>退出登录</button>
@@ -212,7 +212,7 @@
         <div id="hotList" class="hot-list hot-list-placeholder">
           <button id="hotLoadBtn" type="button" class="hot-load-btn">🔥 加载今日知乎热榜</button>
         </div>
-        <p id="hotQuotaNote" class="hot-quota-note">热榜每日接口额度较少，点击后才会请求；服务端会缓存 24 小时，避免重复消耗配额。</p>
+        <p id="hotQuotaNote" class="hot-quota-note">热榜内容会定时更新，点击后加载今日热点。</p>
       </section>
 
       <h3 class="example-title">试试这三类真实场景</h3>
@@ -480,6 +480,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=10"></script>
+  <script type="module" src="/app.js?v=11"></script>
 </body>
 </html>
