@@ -2046,6 +2046,10 @@ function bindEvents() {
   const hotList = $('#hotList');
   if (hotList) {
     hotList.addEventListener('click', (event) => {
+      if (event.target.closest('#hotLoadBtn')) {
+        loadHotList();
+        return;
+      }
       const item = event.target.closest('[data-hot-query]');
       if (item) alchemizeKeyword(item.dataset.hotQuery);
     });
@@ -2675,7 +2679,6 @@ async function init() {
   if (params.get('oauth') === 'failed') toast('知乎登录未完成，请检查部署与回调配置');
   await refreshOauth();
   await loadHistory();
-  loadHotList();
 }
 
 init();

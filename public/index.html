@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -209,9 +209,10 @@
           <h3 class="example-title">🔥 知乎热榜 · 点题开炼</h3>
           <span id="hotHint" class="muted-line"></span>
         </div>
-        <div id="hotList" class="hot-list">
-          <div class="empty-inline">正在加载今日热榜…</div>
+        <div id="hotList" class="hot-list hot-list-placeholder">
+          <button id="hotLoadBtn" type="button" class="hot-load-btn">🔥 加载今日知乎热榜</button>
         </div>
+        <p id="hotQuotaNote" class="hot-quota-note">热榜每日接口额度较少，点击后才会请求；服务端会缓存 24 小时，避免重复消耗配额。</p>
       </section>
 
       <h3 class="example-title">试试这三类真实场景</h3>
@@ -479,6 +480,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=8"></script>
+  <script type="module" src="/app.js?v=9"></script>
 </body>
 </html>
