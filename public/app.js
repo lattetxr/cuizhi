@@ -444,6 +444,9 @@ function showEmpty() {
   $('#profileView').hidden = true;
   $('#searchPreview').hidden = true;
   $('#homeView').hidden = false;
+  $$('.type-banner').forEach((banner) => banner.remove());
+  $('#typeSwitchMenu')?.remove();
+  $('#tabContent').innerHTML = '';
 }
 
 function setPackageTab(name) {
@@ -578,6 +581,10 @@ function getTypeConfig() {
 }
 
 function renderTypeBanner() {
+  // 每次渲染学习包前清掉旧分类徽标，避免连续打开不同记录时顶部残留多个分类。
+  $$('.type-banner').forEach((banner) => banner.remove());
+  $('#typeSwitchMenu')?.remove();
+
   const notice = $('#degradedNotice');
   const cfg = getTypeConfig();
   const banner = document.createElement('div');
