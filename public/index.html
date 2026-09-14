@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=11">
+  <link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -135,6 +135,18 @@
           <div class="panel-head">
             <h2>我的收藏夹</h2>
             <button id="favActionBtn" class="button ghost" hidden>刷新</button>
+          </div>
+          <div class="favlist-hero">
+            <div>
+              <span class="fav-hero-kicker">整夹炼金</span>
+              <h3>把一整个收藏夹炼成清晰的知识框架</h3>
+              <p>自动梳理最近收藏的主题分布、内容角色和代表作者，再跨主题精选高价值内容，生成观点光谱、认知地图和复习卡片。</p>
+            </div>
+            <div class="fav-hero-points" aria-hidden="true">
+              <span>主题分类</span>
+              <span>方法 / 观点 / 案例</span>
+              <span>精选内容炼金</span>
+            </div>
           </div>
           <div id="favlistList" class="favlist-list">
             <div class="empty-inline">登录后读取收藏夹</div>
@@ -295,6 +307,7 @@
             <div id="tabMorePanel" class="tab-more-panel" hidden></div>
           </div>
         </div>
+        <div id="collectionFrameworkPanel" hidden></div>
         <div id="tabContent"></div>
       </div>
     </section>
@@ -480,6 +493,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=11"></script>
+  <script type="module" src="/app.js?v=12"></script>
 </body>
 </html>

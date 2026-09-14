@@ -4885,3 +4885,563 @@ body.demo-open {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ========== 收藏夹整夹炼金 ========== */
+.profile-panel-favlists {
+  grid-column: 1 / -1;
+}
+
+.favlist-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin: 4px 0 14px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--gold-line);
+  background:
+    radial-gradient(circle at 92% 12%, rgba(245, 166, 35, 0.18), transparent 34%),
+    linear-gradient(135deg, #fffaf2 0%, #ffffff 62%);
+}
+
+.fav-hero-kicker,
+.cf-kicker {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: #9f6717;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.favlist-hero h3 {
+  margin: 8px 0 6px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.favlist-hero p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.fav-hero-points {
+  display: grid;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.fav-hero-points span {
+  display: block;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.favlist-list {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
+.favlist-rich {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff 0%, #fffdf8 100%);
+}
+
+.favlist-rich::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--gold), #ffd990);
+}
+
+.favlist-main {
+  padding: 14px;
+}
+
+.favlist-title-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.favlist-folder {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--gold-soft);
+  color: #9f6717;
+  font-weight: 800;
+}
+
+.favlist-title-row h3 {
+  margin: 1px 0 4px;
+  font-size: 15px;
+}
+
+.favlist-title-row p {
+  margin: 0;
+  min-height: 38px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.favlist-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.favlist-actions .button {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.fav-framework {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+}
+
+.fav-framework p {
+  margin: 0 0 10px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6;
+}
+
+.cf-category-list {
+  display: grid;
+  gap: 8px;
+}
+
+.cf-category-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.cf-category-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+}
+
+.cf-category-label b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cf-category-label em,
+.ratio-item em {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.cf-category-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cf-category-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e9edf3;
+  overflow: hidden;
+}
+
+.cf-category-track i {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+}
+
+.cf-role-list {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.cf-role-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: #0b63b6;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cf-role-list span em {
+  font-style: normal;
+  opacity: 0.72;
+}
+
+.cf-mini-path {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cf-mini-path span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.cf-mini-path b {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: white;
+  font-size: 11px;
+  flex: none;
+}
+
+.cf-source-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cf-source-list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: inherit;
+}
+
+.cf-source-list a span {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.cf-source-list a strong {
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cf-source-list a em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.collection-framework-card {
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.cf-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cf-hero h3 {
+  margin: 8px 0 6px;
+  font-size: 20px;
+}
+
+.cf-hero p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.cf-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.cf-stat-grid span {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--gold-soft);
+  text-align: center;
+}
+
+.cf-stat-grid strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.1;
+  color: #9f6717;
+}
+
+.cf-stat-grid em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cf-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.cf-block h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.cf-block h4:not(:first-child) {
+  margin-top: 18px;
+}
+
+.cf-role-list.large span {
+  font-size: 12.5px;
+  padding: 5px 10px;
+}
+
+.cf-path-list {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: path;
+}
+
+.cf-path-list li {
+  position: relative;
+  padding: 10px 12px 10px 42px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.cf-path-list li::before {
+  counter-increment: path;
+  content: counter(path);
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cf-path-list strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.cf-path-list p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.cf-path-list small {
+  color: #9f6717;
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  .favlist-hero,
+  .cf-hero,
+  .cf-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fav-hero-points {
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fav-hero-points span {
+    padding: 7px 6px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .favlist-list {
+    grid-template-columns: 1fr;
+  }
+
+  .fav-hero-points {
+    grid-template-columns: 1fr;
+  }
+
+  .cf-category-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .cf-stat-grid {
+    width: 100%;
+  }
+
+  .cf-source-list a {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cf-source-list a em {
+    grid-column: 2;
+  }
+}
+
+.cf-author-list {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.cf-author-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.cf-author-list em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 11.5px;
+}
+
+.cf-index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.cf-index-card {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.cf-index-card header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.cf-index-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  flex: none;
+}
+
+.cf-index-card header div {
+  display: grid;
+  min-width: 0;
+}
+
+.cf-index-card strong {
+  font-size: 14px;
+}
+
+.cf-index-card header em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.cf-index-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cf-index-card li {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.cf-index-card li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cf-index-card a {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.cf-index-card a:hover {
+  color: var(--accent);
+}
+
+.cf-index-card small {
+  color: var(--muted);
+  font-size: 11.5px;
+}

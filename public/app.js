@@ -88,6 +88,10 @@ const state = {
     followees: { items: [], offset: '0', end: false, loaded: false, loading: false },
     contents: { items: [], offset: '0', end: false, loaded: false, loading: false },
     favlistsLoaded: false,
+    favlists: [],
+    favlistInsights: {},
+    expandedFavlists: new Set(),
+    favlistInsightLoading: new Set(),
   },
   searchPreview: { query: '', items: [], groups: [], selected: new Set(), demo: false, loading: false },
   pkg: null,
@@ -305,6 +309,10 @@ function resetProfileData() {
     followees: { items: [], offset: '0', end: false, loaded: false, loading: false },
     contents: { items: [], offset: '0', end: false, loaded: false, loading: false },
     favlistsLoaded: false,
+    favlists: [],
+    favlistInsights: {},
+    expandedFavlists: new Set(),
+    favlistInsightLoading: new Set(),
   };
   $('#followeeList').innerHTML = '';
   $('#profileContentList').innerHTML = '';
@@ -446,6 +454,81 @@ function setPackageTab(name) {
   renderTab();
 }
 
+function renderCollectionFramework(pkg) {
+  const framework = pkg.collectionFramework;
+  const panel = $('#collectionFrameworkPanel');
+  if (!panel) return;
+  if (!framework) {
+    panel.innerHTML = '';
+    panel.hidden = true;
+    return;
+  }
+  const selectedCount = pkg.collectionMeta?.selectedCount || pkg.sourceAnswers?.length || 0;
+  panel.hidden = false;
+  panel.innerHTML = `
+    <section class="collection-framework-card package-card">
+      <div class="cf-hero">
+        <div>
+          <span class="cf-kicker">整夹知识框架</span>
+          <h3>先看知识骨架，再进入观点、地图与复习卡片</h3>
+          <p>${escapeHtml(framework.summary)}</p>
+        </div>
+        <div class="cf-stat-grid">
+          <span><strong>${framework.total}</strong><em>已梳理</em></span>
+          <span><strong>${selectedCount}</strong><em>精选炼金</em></span>
+          <span><strong>${framework.categories.length}</strong><em>主题分区</em></span>
+          <span><strong>${framework.topAuthors.length}</strong><em>代表作者</em></span>
+        </div>
+      </div>
+      <div class="cf-content-grid">
+        <div class="cf-block">
+          <h4>主题分布</h4>
+          <div class="cf-category-list">
+            ${framework.categories.map((category) => categoryBarHtml(category, framework.total, false)).join('')}
+          </div>
+          <h4>内容形态</h4>
+          <div class="cf-role-list large">
+            ${framework.contentTypes.map((type) => `<span>${escapeHtml(type.name)}<em>${type.count}</em></span>`).join('')}
+          </div>
+          <h4>代表作者</h4>
+          <div class="cf-author-list">
+            ${framework.topAuthors.map((author) => `<span>${escapeHtml(author.name)}<em>${author.count} 篇</em></span>`).join('')}
+          </div>
+        </div>
+        <div class="cf-block">
+          <h4>内容角色</h4>
+          <div class="cf-role-list large">
+            ${framework.roles.map((role) => `<span title="${escapeHtml(role.description)}">${escapeHtml(role.name)}<em>${role.count}</em></span>`).join('')}
+          </div>
+          <h4>推荐消化路径</h4>
+          <ol class="cf-path-list">
+            ${framework.path.map((step) => `<li><strong>${escapeHtml(step.title)}</strong><p>${escapeHtml(step.action)}</p><small>${escapeHtml(step.duration)}</small></li>`).join('')}
+          </ol>
+        </div>
+      </div>
+      <h4>分类内容索引</h4>
+      <div class="cf-index-grid">
+        ${framework.categories.map((category) => `
+          <article class="cf-index-card">
+            <header>
+              <span class="cf-index-icon" style="background:${escapeHtml(category.color)}">${escapeHtml(category.icon)}</span>
+              <div>
+                <strong>${escapeHtml(category.name)}</strong>
+                <em>${category.count} 条 · ${Math.round(category.ratio * 100)}%</em>
+              </div>
+            </header>
+            <ul>
+              ${category.items.slice(0, 3).map((item) => `
+                <li>
+                  <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a>
+                  <small>${escapeHtml(item.typeLabel)} · ${escapeHtml(item.author)} · ▲ ${Number(item.likeCount || 0).toLocaleString()}</small>
+                </li>`).join('')}
+            </ul>
+          </article>`).join('')}
+      </div>
+    </section>`;
+}
+
 function renderPackage(pkg) {
   state.pkg = pkg;
   $('#homeView').hidden = true;
@@ -461,6 +544,7 @@ function renderPackage(pkg) {
   ].join(' · ');
   $('#exportMdBtn').href = `/api/packages/${pkg.id}/export?format=md`;
   $('#exportHtmlBtn').href = `/api/packages/${pkg.id}/export?format=html`;
+  renderCollectionFramework(pkg);
   const notice = $('#degradedNotice');
   if (pkg.notices?.length) {
     notice.hidden = false;
@@ -1711,6 +1795,107 @@ async function openPackage(id) {
   }
 }
 
+function categoryBarHtml(category, total, compact = false) {
+  const percent = total ? Math.round(category.ratio * 100) : 0;
+  return `
+    <div class="cf-category-row" title="${escapeHtml(category.name)} ${category.count} 条">
+      <div class="cf-category-label">
+        <span class="cf-category-dot" style="background:${escapeHtml(category.color)}"></span>
+        <b>${escapeHtml(category.name)}</b>
+        <em>${category.count} 条 · ${percent}%</em>
+      </div>
+      <div class="cf-category-track"><i style="width:${percent}%;background:${escapeHtml(category.color)}"></i></div>
+    </div>`;
+}
+
+function renderFavlistFrameworkPreview(framework, compact = true) {
+  const categories = framework.categories.slice(0, compact ? 5 : 8);
+  const roles = framework.roles.slice(0, 5);
+  const topItems = framework.topItems.slice(0, compact ? 2 : 5);
+  return `
+    <div class="fav-framework" aria-label="收藏夹知识框架预览">
+      <p>${escapeHtml(framework.summary)}</p>
+      <div class="cf-category-list">
+        ${categories.map((category) => categoryBarHtml(category, framework.total, true)).join('')}
+      </div>
+      <div class="cf-role-list">
+        ${roles.map((role) => `<span>${escapeHtml(role.name)}<em>${role.count}</em></span>`).join('')}
+      </div>
+      <div class="cf-mini-path">
+        ${framework.path.slice(0, 3).map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(step.title)}</span>`).join('')}
+      </div>
+      <div class="cf-source-list">
+        ${topItems.map((item) => `
+          <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+            <span>${escapeHtml(item.typeLabel)}</span>
+            <strong>${escapeHtml(item.title)}</strong>
+            <em>${escapeHtml(item.author)}</em>
+          </a>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderFavlists(items) {
+  const list = $('#favlistList');
+  list.innerHTML = items.map((item) => {
+    const token = String(item.UrlToken || '');
+    const loaded = state.profile.favlistInsights[token];
+    const expanded = state.profile.expandedFavlists.has(token);
+    const loading = state.profile.favlistInsightLoading.has(token);
+    return `
+      <article class="favlist-item favlist-rich">
+        <div class="favlist-main">
+          <div class="favlist-title-row">
+            <span class="favlist-folder">夹</span>
+            <div>
+              <h3>${escapeHtml(item.Title || '未命名收藏夹')}</h3>
+              <p>${escapeHtml(item.Description || '把这个收藏夹整理成可学习、可复习的知识框架。')}</p>
+            </div>
+          </div>
+          ${expanded && loaded ? renderFavlistFrameworkPreview(loaded.framework) : ''}
+          <div class="favlist-actions">
+            <button class="button ghost" data-favlist-insight="${escapeHtml(token)}" ${loading ? 'disabled' : ''}>
+              ${loading ? '正在梳理…' : expanded ? '收起知识框架' : '预览知识框架'}
+            </button>
+            <button class="button primary" data-favlist="${escapeHtml(token)}">✨ 整夹炼金</button>
+          </div>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+async function loadFavlistInsight(token) {
+  if (!token || state.profile.favlistInsightLoading.has(token)) return;
+  state.profile.favlistInsightLoading.add(token);
+  renderFavlists(state.profile.favlists);
+  try {
+    const data = await api(`/api/me/favlists/${encodeURIComponent(token)}/insight?Limit=200`);
+    state.profile.favlistInsights[token] = data;
+    state.profile.expandedFavlists.add(token);
+  } catch (error) {
+    state.profile.expandedFavlists.delete(token);
+    toast(error.message);
+  } finally {
+    state.profile.favlistInsightLoading.delete(token);
+    renderFavlists(state.profile.favlists);
+  }
+}
+
+async function toggleFavlistInsight(token) {
+  if (!token) return;
+  if (state.profile.expandedFavlists.has(token)) {
+    state.profile.expandedFavlists.delete(token);
+    renderFavlists(state.profile.favlists);
+    return;
+  }
+  if (state.profile.favlistInsights[token]) {
+    state.profile.expandedFavlists.add(token);
+    renderFavlists(state.profile.favlists);
+    return;
+  }
+  await loadFavlistInsight(token);
+}
+
 async function loadFavlists() {
   const btn = $('#favActionBtn');
   const list = $('#favlistList');
@@ -1719,22 +1904,16 @@ async function loadFavlists() {
     const data = await api('/api/me/favlists?Limit=50');
     const items = data.data?.Items || [];
     state.profile.favlistsLoaded = true;
+    state.profile.favlists = items;
+    state.profile.favlistInsights = {};
+    state.profile.expandedFavlists = new Set();
     if (!items.length) {
-      list.innerHTML = '<div class="empty-inline">没有可读取的收藏夹</div>';
+      list.innerHTML = '<div class="empty-inline">还没有可读取的收藏夹，先在知乎收藏几篇好内容吧</div>';
       return;
     }
-    list.innerHTML = items
-      .map(
-        (item) => `
-          <div class="favlist-item">
-            <h3>${escapeHtml(item.Title)}</h3>
-            <p>${escapeHtml(item.Description || '')}</p>
-            <button class="button" data-favlist="${escapeHtml(item.UrlToken)}">整夹炼金</button>
-          </div>`,
-      )
-      .join('');
+    renderFavlists(items);
   } catch (error) {
-    if (list) list.innerHTML = `<div class="empty-inline">${escapeHtml(error.message)}</div>`;
+    if (list) list.innerHTML = '<div class="empty-inline">收藏夹暂时没有读取成功，请稍后再试</div>';
     toast(error.message);
   } finally {
     setLoading(btn, false);
@@ -1742,18 +1921,34 @@ async function loadFavlists() {
 }
 
 async function alchemizeFavlist(token, button) {
+  const btn = button || $('#alchemyBtn');
+  showAlchemyOverlay();
+  setLoading(btn, true, '炼金中...');
+  const progress = createAlchemyProgress();
   try {
-    setLoading(button, true, '炼金中...');
-    const data = await api(`/api/favlists/${encodeURIComponent(token)}/alchemy`, {
-      method: 'POST',
-      body: JSON.stringify({ goal: state.goal }),
-    });
+    const favlist = state.profile.favlists.find((item) => String(item.UrlToken) === String(token));
+    const data = await streamAlchemy(
+      {
+        goal: state.goal,
+        limit: 200,
+        title: favlist?.Title || '收藏夹',
+        url: favlist?.Url || '',
+      },
+      progress,
+      `/api/favlists/${encodeURIComponent(token)}/alchemy`,
+    );
+    await progress.finish();
+    $('#searchPreview').hidden = true;
     renderPackage(data.pkg);
+    toast('整夹炼金完成');
     loadHistory();
   } catch (error) {
+    progress.cancel();
+    showEmpty();
     toast(error.message);
   } finally {
-    setLoading(button, false);
+    hideAlchemyOverlay();
+    setLoading(btn, false);
   }
 }
 
@@ -1861,8 +2056,8 @@ function createAlchemyProgress() {
 }
 
 // 流式读取 /api/alchemy 的 NDJSON：进度行驱动进度条，终行渲染学习包
-async function streamAlchemy(payload, progressCtrl) {
-  const response = await fetch('/api/alchemy', {
+async function streamAlchemy(payload, progressCtrl, path = '/api/alchemy') {
+  const response = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -2174,6 +2369,11 @@ function bindEvents() {
   $('#favActionBtn').addEventListener('click', loadFavlists);
 
   $('#favlistList').addEventListener('click', (event) => {
+    const insightButton = event.target.closest('[data-favlist-insight]');
+    if (insightButton) {
+      toggleFavlistInsight(insightButton.dataset.favlistInsight);
+      return;
+    }
     const button = event.target.closest('[data-favlist]');
     if (button) alchemizeFavlist(button.dataset.favlist, button);
   });

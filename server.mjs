@@ -17,6 +17,7 @@ import { callUserApi, USER_ENDPOINTS, fetchOAuthUser, clampLimit, normalizeOffse
 import { toHtml, toMarkdown } from './lib/export.mjs';
 import { runPipeline, runPipelineFromSource, runPipelineFromSearch, runCoachTurn, previewSearch } from './agents/pipeline.js';
 import { fetchHotList, fetchQuota } from './server/lib/zhihu.js';
+import { buildFavlistFramework, favItemsToAnswers, selectRepresentativeItems } from './server/lib/favlistFramework.mjs';
 import { NUOCI_ANSWERS, NUOCI_META } from './server/lib/nuociDataset.js';
 import { EXISTENCE_MATCH, EXISTENCE_KEYWORD, EXISTENCE_ANSWER, EXISTENCE_CARDS, EXISTENCE_VISUAL_CARDS, EXISTENCE_COACH_OPENING } from './server/lib/existenceDataset.js';
 import { KAOYAN_MATCH, KAOYAN_KEYWORD, KAOYAN_ANSWER, KAOYAN_MAP, KAOYAN_COACH_OPENING } from './server/lib/kaoyanDataset.js';
@@ -782,44 +783,171 @@ app.get('/api/me/collections', asyncRoute(async (req, res) => {
   });
 }));
 
+const favlistContentCache = new Map();
+const FAVLIST_CONTENT_CACHE_TTL_MS = 90_000;
+const FAVLIST_CONTENT_CACHE_LIMIT = 20;
+
+function readFavlistContentCache(key) {
+  const cached = favlistContentCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.at > FAVLIST_CONTENT_CACHE_TTL_MS) {
+    favlistContentCache.delete(key);
+    return null;
+  }
+  return cached.value;
+}
+
+function writeFavlistContentCache(key, value) {
+  if (favlistContentCache.size >= FAVLIST_CONTENT_CACHE_LIMIT) {
+    favlistContentCache.delete(favlistContentCache.keys().next().value);
+  }
+  favlistContentCache.set(key, { at: Date.now(), value });
+}
+
+async function fetchFavlistContentsBatched(accessToken, urlToken, maxItems = 200) {
+  const pageSize = 50;
+  const target = Math.min(200, Math.max(1, Number(maxItems) || 200));
+  const identityKey = accessToken || '__direct__';
+  const cacheKey = `${identityKey}\u0000${urlToken}\u0000${target}`;
+  const cached = readFavlistContentCache(cacheKey);
+  if (cached) return { ...cached, cached: true };
+
+  const items = [];
+  const seen = new Set();
+  let offset = '0';
+  let paging = null;
+
+  while (items.length < target) {
+    const data = await callUserApi(
+      USER_ENDPOINTS.favlistContents,
+      { FavlistUrlToken: urlToken, Offset: offset, Limit: pageSize },
+      accessToken,
+    );
+    for (const item of data.Items || []) {
+      const key = String(item.ContentID || item.Url || `${offset}-${items.length}`);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(item);
+      if (items.length >= target) break;
+    }
+    paging = normalizePaging(data.Paging, { offset, limit: pageSize });
+    if (paging.isEnd || !paging.nextOffset || paging.nextOffset === offset) break;
+    offset = paging.nextOffset;
+  }
+
+  const result = {
+    items,
+    paging,
+    truncated: items.length >= target && !paging?.isEnd,
+  };
+  if (items.length) writeFavlistContentCache(cacheKey, result);
+  return { ...result, cached: false };
+}
+
+app.get('/api/me/favlists/:urlToken/insight', asyncRoute(async (req, res) => {
+  const identity = resolveIdentity(req, res);
+  if (!identity) return;
+  const { urlToken } = req.params;
+  const maxItems = Math.min(200, Math.max(1, Number.parseInt(req.query.Limit, 10) || 200));
+  const { items, paging, truncated } = await fetchFavlistContentsBatched(
+    identity.accessToken,
+    urlToken,
+    maxItems,
+  );
+  if (!items.length) {
+    res.status(422).json({ ok: false, error: '这个收藏夹里还没有可分析的内容' });
+    return;
+  }
+  const framework = buildFavlistFramework(items);
+  if (truncated) {
+    framework.summary += ' 本次优先梳理最近 200 条收藏，先生成最值得消化的知识骨架。';
+  }
+  res.json({
+    ok: true,
+    favlist: {
+      UrlToken: urlToken,
+      Title: '收藏夹',
+      Url: `https://www.zhihu.com/collection/${urlToken}`,
+    },
+    framework,
+    paging,
+    truncated,
+  });
+}));
+
 app.post('/api/favlists/:urlToken/alchemy', asyncRoute(async (req, res) => {
   const identity = resolveIdentity(req, res);
   if (!identity) return;
   const { urlToken } = req.params;
-  const lists = await callUserApi(USER_ENDPOINTS.favlists, { Limit: 50 }, identity.accessToken);
-  const favlist = (lists.Items || []).find((item) => String(item.UrlToken) === String(urlToken));
-  const contents = await callUserApi(
-    USER_ENDPOINTS.favlistContents,
-    { FavlistUrlToken: urlToken, Limit: 10 },
+  const goal = req.body?.goal || '入门';
+  const maxItems = Math.min(200, Math.max(1, Number.parseInt(req.body?.limit, 10) || 200));
+  const { items: rawItems, truncated } = await fetchFavlistContentsBatched(
     identity.accessToken,
+    urlToken,
+    maxItems,
   );
-  const items = contents.Items || [];
-  if (!items.length) {
+  const favlist = {
+    UrlToken: urlToken,
+    Title: String(req.body?.title || '收藏夹'),
+    Url: String(req.body?.url || `https://www.zhihu.com/collection/${urlToken}`),
+  };
+  if (!rawItems.length) {
     res.status(422).json({ ok: false, error: '这个收藏夹里还没有可炼金的内容' });
     return;
   }
-  const goal = req.body?.goal || '入门';
-  const answers = items.map((item, index) => ({
-    answerId: String(item.ContentID || item.Url || `fav-${index + 1}`),
-    author: item.Author?.Name || '收藏内容',
-    title: item.Title || '',
-    summary: item.Summary || '',
-    content: `${item.Title || ''}\n${item.Summary || ''}`,
-    voteCount: Number(item.LikeCount || 0),
-    authorityLevel: 2,
-    url: item.Url || '',
-  }));
-  const pipeline = await runPipeline({ answers });
-  pipeline.source = { demo: false, notice: null, count: answers.length };
-  const pkg = pipelineToPkg({
-    pipeline,
-    goal,
-    sourceUrl: favlist?.Url || '',
-    title: `收藏夹：${favlist?.Title || `#${urlToken}`}`,
-    kind: 'collection',
-  });
-  await createPackage(pkg);
-  res.json({ ok: true, mock: false, pkg: presentPackage(pkg) });
+
+  const framework = buildFavlistFramework(rawItems);
+  if (truncated) {
+    framework.summary += ' 本次优先梳理最近 200 条收藏，先生成最值得消化的知识骨架。';
+  }
+  const representativeItems = selectRepresentativeItems(rawItems, 12);
+  const answers = favItemsToAnswers(representativeItems);
+
+  res.setHeader('Content-Type', 'application/x-ndjson');
+  res.setHeader('Cache-Control', 'no-store');
+  res.flushHeaders();
+  const send = (obj) => res.write(`${JSON.stringify(obj)}
+`);
+  const onProgress = (info) => {
+    if (info?.progress) send({ progress: info.progress, step: info.step, status: info.status });
+  };
+
+  try {
+    send({ progress: 6, step: 'quench', status: `正在梳理 ${framework.total} 条收藏的知识结构` });
+    send({ progress: 12, step: 'quench', status: `已选出 ${answers.length} 条代表内容` });
+    const pipeline = await runPipeline({ answers, onProgress });
+    pipeline.source = {
+      demo: false,
+      notice: null,
+      count: rawItems.length,
+      selectedCount: answers.length,
+      framework,
+    };
+    const pkg = pipelineToPkg({
+      pipeline,
+      goal,
+      sourceUrl: favlist?.Url || '',
+      title: `收藏夹：${favlist?.Title || `#${urlToken}`}`,
+      kind: 'collection',
+    });
+    pkg.contentType = 'collection';
+    pkg.collectionFramework = framework;
+    pkg.collectionMeta = {
+      urlToken,
+      analyzedCount: rawItems.length,
+      selectedCount: answers.length,
+      truncated,
+      title: favlist?.Title || '收藏夹',
+      url: favlist?.Url || '',
+    };
+    await createPackage(pkg);
+    send({ ok: true, progress: 100, mock: false, pkg: presentPackage(pkg) });
+    res.end();
+  } catch (error) {
+    console.error('[favlist alchemy failed]', error);
+    send({ ok: false, error: '收藏夹炼金暂时没有成功，请稍后再试' });
+    res.end();
+  }
 }));
 
 app.listen(port, host, () => {
