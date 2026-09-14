@@ -28,7 +28,7 @@ test('OAuth 用户资料使用 access token 作为 Bearer 并解析昵称头像'
       name: '知乎同学',
       avatarUrl: 'https://pic.example.com/avatar.jpg',
       headline: '终身学习者',
-      url: 'https://www.zhihu.com/people/zhihu-user',
+      url: null,
     });
     assert.equal(requests[0].url, 'https://openapi.zhihu.com/user');
     assert.equal(requests[0].options.headers.Authorization, 'Bearer oauth-token-123');

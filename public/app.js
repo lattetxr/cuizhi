@@ -202,11 +202,12 @@ function initialOf(name) {
   return text[0] || '知';
 }
 
-function avatarHtml(profile, extraClass = '') {
+function avatarHtml(profile, extraClass = '', fallbackText = '') {
   const name = profile?.name || '知乎用户';
-  const letter = escapeHtml(initialOf(name));
+  const letter = escapeHtml(fallbackText || initialOf(name));
+  const wrapClass = fallbackText ? `avatar-letter ${extraClass}` : extraClass;
   if (profile?.avatarUrl) {
-    return `<span class="avatar-wrap ${extraClass}"><span class="avatar-fallback">${letter}</span><img class="avatar-img" src="${escapeHtml(profile.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
+    return `<span class="avatar-wrap ${wrapClass}"><span class="avatar-fallback">${letter}</span><img class="avatar-img" src="${escapeHtml(profile.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
   }
   return `<span class="avatar-wrap avatar-letter ${extraClass}">${letter}</span>`;
 }
@@ -228,7 +229,7 @@ function renderOauth(status) {
     avatarBtn.title = showTopName ? displayName : '个人中心';
     avatarBtn.setAttribute('aria-label', showTopName ? `个人中心：${displayName}` : '个人中心');
     avatarBtn.innerHTML = `
-      ${avatarHtml(identity.profile, 'avatar-top')}
+      ${avatarHtml(identity.profile, 'avatar-top', '知')}
       ${showTopName ? `<span class="top-user-name">${escapeHtml(displayName)}</span>` : ''}
     `;
     favHomeBtn.textContent = '查看我的收藏夹';
@@ -250,14 +251,7 @@ function renderProfileHeader() {
   const profile = identity?.profile || { name: '未登录', headline: '' };
   $('#profileName').textContent = profile.name || '知乎用户';
   $('#profileHeadline').textContent = profile.headline || '';
-  $('#profileAvatar').innerHTML = avatarHtml(profile, 'avatar-large');
-  const urlLink = $('#profileUrl');
-  if (profile.url) {
-    urlLink.href = profile.url;
-    urlLink.hidden = false;
-  } else {
-    urlLink.hidden = true;
-  }
+  $('#profileAvatar').innerHTML = avatarHtml(profile, 'avatar-large', '知');
   const modeChip = $('#profileModeChip');
   if (identity?.mode === 'oauth') {
     modeChip.textContent = '知乎授权';
