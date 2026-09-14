@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
-  <link rel="icon" href="data:,">
+  <link rel="icon" type="image/png" href="/assets/brand-icon.png">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=21">
+  <link rel="stylesheet" href="/styles.css?v=24">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -100,7 +100,11 @@
           <p>收藏炼金炉</p>
         </div>
       </div>
-      <img class="lks-img lks-top" src="/assets/liukanshan/greet.gif?v=2" alt="" loading="lazy" decoding="async">
+      <span class="miner-mascot miner-topbar" aria-hidden="true">
+        <span class="miner-pickaxe"><i></i></span>
+        <img class="lks-img lks-top" src="/assets/liukanshan/greet.gif?v=2" alt="" loading="lazy" decoding="async">
+        <span class="miner-helmet"><i></i></span>
+      </span>
       <input id="sourceInput" type="text" placeholder="输入问题自动搜索知乎，或粘贴回答链接……" autocomplete="off">
       <button id="alchemyBtn" class="button primary">
         <svg class="furnace-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -324,7 +328,11 @@
 
   <div id="alchemyOverlay" class="alchemy-overlay" hidden>
     <div class="alchemy-box">
-      <img class="lks-img lks-working" src="/assets/liukanshan/working.gif?v=2" alt="" loading="lazy" decoding="async">
+      <span class="miner-mascot miner-sm alchemy-miner" aria-hidden="true">
+        <span class="miner-pickaxe"><i></i></span>
+        <img class="lks-img lks-working" src="/assets/liukanshan/working.gif?v=2" alt="" loading="lazy" decoding="async">
+        <span class="miner-helmet"><i></i></span>
+      </span>
       <div class="alchemy-steps">
         <div class="alchemy-step" data-step="quench">
           <span class="step-index">淬取</span>

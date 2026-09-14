@@ -6669,3 +6669,1082 @@ body.guide-open {
     line-height: 1.72;
   }
 }
+
+/* ========== v22：深蓝矿井 × 黄金矿工统一视觉主题 ========== */
+:root {
+  --bg: #030d20;
+  --surface: rgba(10, 32, 64, 0.88);
+  --surface-strong: #0d2b56;
+  --surface-soft: rgba(16, 48, 92, 0.62);
+  --ink: #f5f9ff;
+  --muted: #aebdd6;
+  --line: rgba(143, 188, 255, 0.16);
+  --soft: rgba(255, 255, 255, 0.075);
+  --gold: #f7bd45;
+  --gold-strong: #d99014;
+  --gold-soft: rgba(247, 189, 69, 0.14);
+  --gold-line: rgba(247, 189, 69, 0.44);
+  --navy: #061b3d;
+  --navy-deep: #020916;
+  --blue: #58b7ff;
+  --blue-strong: #2f9bff;
+  --accent: #73c7ff;
+  --accent-soft: rgba(47, 155, 255, 0.17);
+  --danger: #ff8075;
+  --danger-soft: rgba(255, 128, 117, 0.13);
+  --success: #70df98;
+  --success-soft: rgba(112, 223, 152, 0.13);
+  --neutral: #9aa9c0;
+  --minority: #c9a0ff;
+  --shadow: 0 14px 38px rgba(0, 5, 18, 0.34);
+  --shadow-hover: 0 20px 54px rgba(0, 8, 25, 0.48);
+}
+
+html {
+  color-scheme: dark;
+  background: var(--navy-deep);
+}
+
+body {
+  background:
+    radial-gradient(980px 620px at 86% -12%, rgba(247, 189, 69, 0.18), transparent 62%),
+    radial-gradient(900px 720px at -8% 16%, rgba(47, 155, 255, 0.18), transparent 58%),
+    linear-gradient(155deg, #020916 0%, #061b3d 46%, #03112b 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(214, 232, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 232, 255, 0.045) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: radial-gradient(circle at 50% 8%, black 0%, rgba(0, 0, 0, 0.72) 42%, transparent 82%);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  right: -120px;
+  bottom: -160px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(247, 189, 69, 0.12), transparent 68%);
+  filter: blur(4px);
+  z-index: -1;
+}
+
+a {
+  color: #8ed2ff;
+}
+
+.topbar {
+  background: rgba(3, 15, 34, 0.78);
+  border-bottom: 1px solid rgba(247, 189, 69, 0.18);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 30px rgba(0, 5, 18, 0.22);
+}
+
+.brand-mark {
+  background: linear-gradient(145deg, #ffe08a, #f7bd45 48%, #c8790a);
+  color: #18304f;
+  border: 1px solid rgba(255, 235, 180, 0.58);
+  box-shadow: 0 8px 22px rgba(247, 189, 69, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.miner-topbar,
+.alchemy-miner {
+  width: 42px;
+  height: 42px;
+  border-width: 2px;
+  box-shadow: 0 8px 20px rgba(0, 5, 18, 0.28), inset 0 -5px 12px rgba(126, 66, 0, 0.16);
+  animation: none;
+}
+
+.alchemy-miner {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 8px;
+}
+
+.miner-topbar .miner-pickaxe,
+.alchemy-miner .miner-pickaxe {
+  display: none;
+}
+
+.miner-topbar img,
+.alchemy-miner img {
+  transform: scale(0.92);
+}
+
+.searchbar #sourceInput,
+input,
+textarea {
+  background: rgba(2, 12, 29, 0.58);
+  border-color: rgba(143, 188, 255, 0.2);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.searchbar #sourceInput::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: rgba(174, 190, 214, 0.72);
+}
+
+input:focus,
+textarea:focus,
+.searchbar #sourceInput:focus {
+  outline: 0;
+  border-color: var(--gold-line);
+  box-shadow: 0 0 0 3px rgba(247, 189, 69, 0.15), 0 0 24px rgba(247, 189, 69, 0.08);
+}
+
+.button {
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(143, 188, 255, 0.2);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.button:hover {
+  background: rgba(47, 155, 255, 0.13);
+  border-color: rgba(115, 199, 255, 0.38);
+}
+
+.button.primary,
+#alchemyBtn {
+  background: linear-gradient(135deg, #ffe08a 0%, #f7bd45 48%, #d99014 100%);
+  border-color: rgba(255, 226, 157, 0.65);
+  color: #1e2633;
+  font-weight: 800;
+  box-shadow: 0 10px 26px rgba(217, 144, 20, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.button.primary:hover,
+#alchemyBtn:hover {
+  background: linear-gradient(135deg, #ffe8a2, #ffc65d 52%, #df9618);
+}
+
+.button.ghost {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.button.success {
+  background: var(--success-soft);
+  border-color: rgba(112, 223, 152, 0.35);
+  color: var(--success);
+}
+
+.button.warning {
+  background: var(--gold-soft);
+  border-color: var(--gold-line);
+  color: #ffd783;
+}
+
+.button.danger {
+  background: var(--danger-soft);
+  border-color: rgba(255, 128, 117, 0.34);
+  color: var(--danger);
+}
+
+.text-btn {
+  color: #ffd783;
+}
+
+.chip,
+.seg,
+.seg-btn.active {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ink);
+}
+
+.seg-btn.active {
+  box-shadow: 0 6px 16px rgba(0, 8, 25, 0.24);
+}
+
+.panel,
+.package-card,
+.tabs,
+.menu-panel,
+.profile-head-card,
+.profile-panel,
+.type-switch-menu,
+.legend-item,
+.map-popup,
+.debate-option,
+.mini-review-card,
+.recreate-output,
+.understanding-section,
+.metrics-section,
+.weak-section,
+.suggestions-section {
+  background:
+    linear-gradient(180deg, rgba(17, 48, 92, 0.86), rgba(7, 24, 51, 0.92));
+  border-color: rgba(143, 188, 255, 0.16);
+  box-shadow: var(--shadow);
+}
+
+.panel,
+.package-card {
+  backdrop-filter: blur(14px);
+}
+
+.favlist-item,
+.history-item,
+.stance-card,
+.example-btn,
+.chip-btn,
+.pv-panel,
+.pv-stance {
+  background: rgba(16, 48, 92, 0.58);
+  border-color: rgba(143, 188, 255, 0.15);
+}
+
+.history-item:hover,
+.favlist-item:hover,
+.stance-card:hover,
+.example-btn:hover,
+.chip-btn.active,
+.mini-review-card:hover {
+  border-color: var(--gold-line);
+  background: linear-gradient(180deg, rgba(47, 155, 255, 0.12), rgba(247, 189, 69, 0.09));
+}
+
+.empty-state,
+.visual-empty {
+  background: rgba(13, 43, 86, 0.45);
+  border-color: rgba(247, 189, 69, 0.26);
+}
+
+.tabs {
+  padding: 7px;
+}
+
+.tab-btn {
+  color: var(--muted);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #ffe08a, #f7bd45 58%, #d99014);
+  color: #1e2633;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(217, 144, 20, 0.22);
+}
+
+.rec-badge {
+  background: rgba(2, 12, 29, 0.28) !important;
+  color: inherit !important;
+}
+
+.core-question {
+  background: linear-gradient(90deg, rgba(47, 155, 255, 0.18), rgba(247, 189, 69, 0.08));
+  border-left-color: var(--gold);
+}
+
+.map-stage {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(47, 155, 255, 0.12), transparent 58%),
+    rgba(3, 15, 34, 0.62);
+  border-color: rgba(247, 189, 69, 0.22);
+}
+
+.donut-hole {
+  background: #0a244b;
+}
+
+.chat-shell {
+  background: rgba(8, 26, 54, 0.72);
+}
+
+.chat-msg.user,
+.user-block {
+  background: rgba(47, 155, 255, 0.14);
+  border-left: 3px solid var(--blue);
+}
+
+.chat-msg.ai,
+.debate-summary-card {
+  background: rgba(247, 189, 69, 0.10);
+  border-color: rgba(247, 189, 69, 0.25);
+}
+
+.ai-name,
+.ai-source,
+.ai-point strong {
+  color: #ffd783;
+}
+
+.thinking-dots span {
+  background: var(--gold);
+}
+
+.circle-send,
+.wl-check,
+.wl-send {
+  background: linear-gradient(135deg, #ffe08a, #d99014);
+  color: #1e2633;
+}
+
+.alchemy-overlay {
+  background: rgba(2, 9, 22, 0.84);
+  backdrop-filter: blur(10px);
+}
+
+.alchemy-box {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(247, 189, 69, 0.14), transparent 42%),
+    linear-gradient(180deg, rgba(17, 48, 92, 0.96), rgba(6, 20, 43, 0.98));
+  border-color: rgba(247, 189, 69, 0.28);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+}
+
+.alchemy-progress {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(143, 188, 255, 0.12);
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg, rgba(19, 53, 100, 0.42) 25%, rgba(39, 83, 140, 0.62) 50%, rgba(19, 53, 100, 0.42) 75%);
+  background-size: 200% 100%;
+}
+
+.toast {
+  background: linear-gradient(135deg, #173a6f, #0b2247);
+  border: 1px solid rgba(247, 189, 69, 0.35);
+  color: #fff7e5;
+}
+
+/* 欢迎页：沿用封面深蓝、金色光场 */
+.welcome-view,
+body.welcome-mode {
+  background:
+    radial-gradient(1000px 620px at 82% 8%, rgba(247, 189, 69, 0.20), transparent 58%),
+    radial-gradient(900px 680px at 4% 30%, rgba(47, 155, 255, 0.20), transparent 60%),
+    linear-gradient(145deg, #020916 0%, #061b3d 46%, #04122c 100%) !important;
+}
+
+.wl-nav,
+.wl-card,
+.wl-feature {
+  background: rgba(10, 32, 64, 0.68);
+  border-color: rgba(247, 189, 69, 0.20);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.wl-chip {
+  background: rgba(247, 189, 69, 0.12);
+  border-color: rgba(247, 189, 69, 0.36);
+  color: #ffd783;
+}
+
+.wl-title {
+  color: #fff;
+}
+
+.wl-title em {
+  background: linear-gradient(180deg, #ffe9ad 0%, #f7bd45 62%, #d99014 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.wl-sub,
+.wl-brand-text span,
+.wl-feature span:last-child,
+.wl-note,
+.wl-footer p {
+  color: var(--muted);
+}
+
+.wl-cta-demo {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(143, 188, 255, 0.22);
+  color: var(--ink);
+}
+
+.wl-cta-demo i {
+  color: #ffd783;
+}
+
+.wl-line {
+  background: linear-gradient(90deg, rgba(47, 155, 255, 0.42), rgba(247, 189, 69, 0.38));
+}
+
+.wl-dot-row i,
+.wl-check.empty {
+  background: rgba(47, 155, 255, 0.55);
+}
+
+.wl-ring {
+  background: conic-gradient(#f7bd45 0 38%, #d99014 38% 58%, #58b7ff 58% 100%);
+}
+
+.wl-card-icon,
+.wl-card-spark {
+  background: rgba(247, 189, 69, 0.13);
+  color: #ffd783;
+}
+
+.wl-f-icon {
+  background: linear-gradient(145deg, #173f79, #0b2349);
+  border: 1px solid rgba(115, 199, 255, 0.28);
+  color: #8ed2ff;
+}
+
+.wl-f-icon.gold {
+  background: linear-gradient(145deg, #ffe08a, #d99014);
+  color: #1e2633;
+}
+
+.wl-miner::before,
+.miner-home::before {
+  background: radial-gradient(circle, rgba(247, 189, 69, 0.30) 0%, rgba(47, 155, 255, 0.10) 42%, transparent 70%);
+}
+
+.example-card {
+  background: linear-gradient(180deg, rgba(17, 48, 92, 0.78), rgba(7, 24, 51, 0.9));
+}
+
+.example-card:hover {
+  border-color: var(--gold-line);
+}
+
+.hot-item:nth-child(-n + 3) .hot-rank {
+  background: rgba(255, 128, 117, 0.14);
+  color: var(--danger);
+}
+
+/* 概念复习卡：深蓝卡面 + 金色概念 */
+.visual-face {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(247, 189, 69, 0.16), transparent 38%),
+    linear-gradient(145deg, #123464 0%, #071a38 100%);
+  border-color: rgba(247, 189, 69, 0.36);
+  box-shadow: 0 18px 44px rgba(0, 5, 18, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.visual-face.back {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(88, 183, 255, 0.18), transparent 34%),
+    linear-gradient(145deg, #102f5d 0%, #071a38 100%);
+}
+
+.concept-eyebrow {
+  background: rgba(247, 189, 69, 0.13);
+  border-color: rgba(247, 189, 69, 0.38);
+  color: #ffd783;
+}
+
+.concept-name {
+  color: #ffe196 !important;
+  text-shadow: 0 2px 18px rgba(247, 189, 69, 0.22);
+}
+
+.concept-front-hint {
+  color: #bcd3ef;
+}
+
+.concept-back-section {
+  background: rgba(2, 12, 29, 0.36);
+  border-color: rgba(143, 188, 255, 0.15);
+}
+
+.concept-back-section:first-child {
+  background: linear-gradient(135deg, rgba(247, 189, 69, 0.13), rgba(2, 12, 29, 0.30));
+}
+
+.concept-back-section:last-child {
+  background: linear-gradient(135deg, rgba(47, 155, 255, 0.13), rgba(2, 12, 29, 0.30));
+}
+
+.concept-section-label {
+  color: #ffd783;
+}
+
+.concept-back-section p {
+  color: #eaf3ff;
+}
+
+.visual-filter .filter-btn {
+  background: rgba(247, 189, 69, 0.10);
+  border-color: rgba(247, 189, 69, 0.32);
+  color: #ffd783;
+}
+
+.visual-filter .filter-btn.active {
+  background: linear-gradient(135deg, #ffe08a, #d99014);
+  color: #1e2633;
+}
+
+.card-source {
+  color: #91d3ff !important;
+}
+
+.calendar {
+  background: linear-gradient(180deg, rgba(17, 48, 92, 0.72), rgba(7, 24, 51, 0.86));
+  border-color: rgba(247, 189, 69, 0.25);
+}
+
+.calendar-cell {
+  background: rgba(47, 155, 255, 0.20);
+  color: #dceeff;
+}
+
+.calendar-cell.high {
+  background: linear-gradient(135deg, #ffe08a, #d99014);
+  color: #1e2633;
+}
+
+.guide-dialog {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(247, 189, 69, 0.20), transparent 36%),
+    linear-gradient(145deg, #123464 0%, #071a38 100%);
+  border-color: rgba(247, 189, 69, 0.42);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+}
+
+.guide-dialog h2,
+.guide-steps strong {
+  color: #fff;
+}
+
+.guide-steps article,
+.guide-collection-tip {
+  background: rgba(2, 12, 29, 0.34);
+  border-color: rgba(143, 188, 255, 0.16);
+  color: var(--muted);
+}
+
+.guide-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffd783;
+}
+
+.demo-modal {
+  background:
+    radial-gradient(900px 520px at 82% 4%, rgba(247, 189, 69, 0.24), transparent 58%),
+    radial-gradient(760px 620px at 6% 22%, rgba(47, 155, 255, 0.18), transparent 58%),
+    linear-gradient(145deg, #020916 0%, #061b3d 48%, #04122c 100%) !important;
+}
+
+.demo-topbar,
+.mine-stat,
+.mine-side-panel,
+.mine-ore-card,
+.topic-bins article,
+.raw-ore,
+.result-tab,
+.pv-panel,
+.pv-stance,
+.pv-flashcard {
+  background-color: rgba(10, 32, 64, 0.72);
+}
+
+.pv-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pv-message.ai .pv-bubble {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+
+.pv-message.user .pv-bubble {
+  background: rgba(47, 155, 255, 0.18);
+  color: #eaf5ff;
+}
+
+@media (max-width: 960px) {
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .miner-topbar {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* v22.1：深色主题可读性补齐 */
+.profile-state,
+.preview-notice,
+.hot-rank,
+.preview-votes,
+.fav-hero-kicker,
+.cf-kicker {
+  color: #ffd783;
+}
+
+.followee-item,
+.content-item,
+.preview-item,
+.source-item,
+.hot-load-btn {
+  background: rgba(16, 48, 92, 0.52);
+}
+
+.followee-item:hover,
+.content-item:hover,
+.preview-item:hover,
+.source-item:hover,
+.hot-load-btn:hover {
+  border-color: var(--gold-line);
+}
+
+.mini-review-card .mini-tag {
+  background: rgba(247, 189, 69, 0.14);
+  color: #ffd783;
+}
+
+.card-tag {
+  background: linear-gradient(135deg, #ffe08a, #d99014) !important;
+  color: #1e2633 !important;
+}
+
+.card-title,
+.visual-face .card-body {
+  color: #f5f9ff;
+}
+
+.card-footer {
+  color: #93a8c7;
+}
+
+.calendar-cell {
+  color: #dceeff;
+}
+
+.favlist-hero {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(247, 189, 69, 0.18), transparent 38%),
+    linear-gradient(135deg, rgba(18, 52, 100, 0.92), rgba(7, 24, 51, 0.94));
+  border-color: rgba(247, 189, 69, 0.28);
+}
+
+.fav-hero-points span {
+  background: rgba(2, 12, 29, 0.35);
+  border-color: rgba(143, 188, 255, 0.14);
+  color: #dcecff;
+}
+
+.favlist-rich {
+  background: linear-gradient(180deg, rgba(17, 48, 92, 0.86), rgba(7, 24, 51, 0.94));
+}
+
+.favlist-folder {
+  background: linear-gradient(135deg, #ffe08a, #d99014);
+  color: #1e2633;
+}
+
+.cf-category-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cf-role-list span {
+  color: #a8d9ff;
+}
+
+.cf-stat-grid span {
+  background: rgba(247, 189, 69, 0.12);
+  border: 1px solid rgba(247, 189, 69, 0.22);
+}
+
+.cf-stat-grid strong {
+  color: #ffe196;
+}
+
+.cf-path-list small {
+  color: #ffd783;
+}
+
+.search-preview,
+.hot-item,
+.favlist-item {
+  backdrop-filter: blur(12px);
+}
+
+.preview-notice {
+  background: rgba(247, 189, 69, 0.12);
+}
+
+.hot-rank {
+  background: rgba(247, 189, 69, 0.14);
+}
+
+.path-source,
+.debate-start,
+.ai-name,
+.ai-source {
+  color: #8ed2ff;
+}
+
+/* ========== v23：演示弹窗可读性、标题居中和矿工遮挡修复 ========== */
+.demo-scene-item {
+  text-align: center;
+  padding: 30px 24px 34px;
+}
+
+.demo-section-heading,
+.mine-opening-copy,
+.result-heading {
+  width: 100%;
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.demo-section-heading {
+  margin-bottom: 24px;
+}
+
+.mine-opening-copy {
+  margin-top: 0;
+}
+
+.mine-side-panel {
+  align-items: center;
+  text-align: center;
+}
+
+.mine-side-panel .typewriter,
+.mine-side-panel .typewriter-sub {
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center !important;
+}
+
+.mine-side-panel .typewriter {
+  min-height: 72px;
+}
+
+.mine-side-panel .typewriter-sub {
+  min-height: 76px;
+}
+
+.result-heading {
+  display: flex;
+  justify-content: center;
+}
+
+.result-heading > div {
+  width: 100%;
+  max-width: 760px;
+}
+
+/* 开场：让矿洞退为背景，气泡和标题保持独立层级，避免遮挡 */
+.mine-opening {
+  gap: 20px;
+  padding-top: 16px;
+}
+
+.mine-arch {
+  top: 0;
+  opacity: .22;
+  z-index: 0;
+}
+
+.miner-mascot.miner-xl,
+.mine-bubble,
+.mine-opening-copy {
+  z-index: 2;
+}
+
+.miner-mascot.miner-xl {
+  margin-bottom: 2px;
+}
+
+.mine-bubble.scene-bubble {
+  position: relative;
+  width: min(560px, 88%);
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 22px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(247, 189, 69, .18), transparent 42%),
+    linear-gradient(180deg, rgba(17, 48, 92, .96), rgba(6, 22, 48, .98));
+  border: 1px solid rgba(247, 189, 69, .38);
+  color: #f5f9ff;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.mine-bubble.scene-bubble::before {
+  border-bottom-color: rgba(17, 48, 92, .96);
+}
+
+/* 收藏夹扫描：白色浏览器改为深蓝玻璃卡，保证文字对比度 */
+.collection-browser {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(247, 189, 69, .14), transparent 34%),
+    linear-gradient(180deg, rgba(16, 48, 92, .97), rgba(6, 22, 48, .99));
+  border: 1px solid rgba(247, 189, 69, .25);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255,255,255,.05);
+  color: #eef6ff;
+}
+
+.collection-browser-head {
+  background: linear-gradient(180deg, rgba(19, 57, 108, .98), rgba(10, 34, 70, .97));
+  border-bottom: 1px solid rgba(143, 188, 255, .16);
+}
+
+.collection-browser-head strong {
+  color: #ffffff;
+}
+
+.collection-browser-head p,
+.ore-row cite,
+.collection-browser-foot {
+  color: #aebdd6;
+}
+
+.demo-folder-mark {
+  color: #20180a;
+  text-shadow: none;
+}
+
+.oauth-badge {
+  background: rgba(247, 189, 69, .15);
+  border: 1px solid rgba(247, 189, 69, .28);
+  color: #ffd783;
+}
+
+.scan-line {
+  background: linear-gradient(90deg, transparent, rgba(247, 189, 69, .96), transparent);
+  box-shadow: 0 0 20px rgba(247, 189, 69, .72);
+}
+
+.ore-row {
+  border-bottom: 1px solid rgba(143, 188, 255, .12);
+}
+
+.ore-row h4 {
+  color: #f5f9ff;
+}
+
+.ore-blue .ore-type {
+  background: rgba(47, 155, 255, .18);
+  color: #9ed8ff;
+}
+
+.ore-gold .ore-type {
+  background: rgba(247, 189, 69, .18);
+  color: #ffd783;
+}
+
+.ore-green .ore-type {
+  background: rgba(112, 223, 152, .16);
+  color: #9beebb;
+}
+
+.ore-purple .ore-type {
+  background: rgba(201, 160, 255, .17);
+  color: #d9bcff;
+}
+
+.quality-tag {
+  background: rgba(247, 189, 69, .13);
+  border: 1px solid rgba(247, 189, 69, .22);
+  color: #ffd783;
+}
+
+.collection-browser-foot span::before {
+  color: #9beebb;
+}
+
+/* 分拣场景：金色矿筐使用深棕字，和深蓝背景形成明确对比 */
+.classify-stage {
+  margin-top: 24px;
+}
+
+.topic-bins article {
+  background:
+    linear-gradient(180deg, rgba(255, 238, 190, .98), rgba(247, 189, 69, .94)) !important;
+  border-color: rgba(255, 224, 138, .76) !important;
+  color: #3a2500 !important;
+}
+
+.topic-bins strong {
+  color: #3a2500;
+}
+
+.topic-bins span {
+  color: #8a5410;
+}
+
+.topic-bins small {
+  color: #68450f;
+}
+
+.raw-ore {
+  background: linear-gradient(145deg, rgba(17, 48, 92, .92), rgba(6, 22, 48, .78));
+  border-color: rgba(143, 188, 255, .2);
+}
+
+/* 成果预览：所有动态面板统一深蓝玻璃质感 */
+.result-tab.active {
+  color: #20180a;
+}
+
+.result-preview {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(47, 155, 255, .14), transparent 38%),
+    linear-gradient(180deg, rgba(16, 48, 92, .96), rgba(6, 22, 48, .98)) !important;
+  border: 1px solid rgba(247, 189, 69, .23);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 24px 60px rgba(0,0,0,.36);
+  color: #eef6ff;
+}
+
+.result-preview h4,
+.pv-stance-head,
+.pv-step strong {
+  color: #ffffff;
+}
+
+.pv-panel,
+.pv-stance {
+  background: rgba(2, 12, 29, .44) !important;
+  border: 1px solid rgba(143, 188, 255, .17) !important;
+  color: #eef6ff;
+}
+
+.pv-panel-sub,
+.pv-stance p,
+.pv-stance cite,
+.pv-step span,
+.pv-schedule {
+  color: #aebdd6;
+}
+
+.pv-bar-head span {
+  color: #dcecff;
+}
+
+.pv-bar-head b {
+  color: #ffd783;
+}
+
+.pv-stance.support .pv-stance-head {
+  color: #9ed8ff;
+}
+
+.pv-stance.neutral .pv-stance-head {
+  color: #e2ebf7;
+}
+
+.pv-stance.doubt .pv-stance-head {
+  color: #ffb0a8;
+}
+
+.pv-step b {
+  background: rgba(47, 155, 255, .18);
+  color: #9ed8ff;
+}
+
+.pv-flashcard.front {
+  background: linear-gradient(135deg, rgba(247, 189, 69, .24), rgba(2, 12, 29, .38)) !important;
+  border: 2px solid rgba(247, 189, 69, .48);
+  color: #ffe196;
+}
+
+.pv-flashcard.back {
+  background: linear-gradient(135deg, rgba(47, 155, 255, .20), rgba(2, 12, 29, .38)) !important;
+  border: 2px solid rgba(115, 199, 255, .42);
+  color: #d9efff;
+}
+
+.pv-schedule span {
+  background: rgba(247, 189, 69, .15);
+  border: 1px solid rgba(247, 189, 69, .24);
+  color: #ffd783;
+}
+
+.pv-message.ai .pv-bubble {
+  background: rgba(255, 255, 255, .09);
+  color: #eef6ff;
+}
+
+.pv-message.user .pv-bubble {
+  background: rgba(47, 155, 255, .20);
+  color: #eaf5ff;
+}
+
+.pv-user-dot {
+  background: linear-gradient(135deg, #ffe08a, #d99014);
+  color: #20180a;
+}
+
+@media (max-width: 860px) {
+  .demo-scene-item {
+    padding: 22px 14px 26px;
+  }
+
+  .mine-side-panel .typewriter,
+  .mine-side-panel .typewriter-sub {
+    max-width: 100%;
+  }
+
+  .classify-stage {
+    margin-top: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mine-opening {
+    gap: 14px;
+    padding-top: 10px;
+  }
+
+  .mine-bubble.scene-bubble {
+    width: 92%;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .demo-section-heading {
+    margin-bottom: 18px;
+  }
+}
+
+/* ========== v24：复习日历与看山对练引导可读性微调 ========== */
+.calendar-cell.unlit,
+.calendar-cell:not(.high) {
+  background: #dcecff;
+  border: 1px solid rgba(88, 183, 255, 0.38);
+  color: #061b3d;
+  font-weight: 800;
+}
+
+.calendar-cell.high {
+  font-weight: 900;
+}
+
+.calendar-cell.today {
+  box-shadow: inset 0 0 0 2px #ffffff, 0 0 0 2px rgba(47, 155, 255, 0.55);
+}
+
+.coach-hero {
+  background: linear-gradient(135deg, #eaf4ff 0%, #fff8e6 100%);
+  border-color: rgba(247, 189, 69, 0.42);
+}
+
+.coach-hero-text h3,
+.coach-hero-text p {
+  color: #061b3d;
+}
+
+.coach-hero-text p {
+  font-weight: 600;
+}
