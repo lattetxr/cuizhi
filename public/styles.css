@@ -8364,3 +8364,31 @@ ol.wl-features {
   display: flex;
   justify-content: flex-start;
 }
+
+
+/* ============================================================
+   v28：首页“淬 / 炼 / 固 / 验”去边框，仅作为一组文字说明
+   ============================================================ */
+.process-flow,
+.wl-features {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.process-step,
+.process-step:last-child,
+.wl-feature,
+.wl-feature:last-child {
+  border-right: 0;
+}
+
+@media (max-width: 900px) {
+  .process-step,
+  .process-step:last-child,
+  .wl-feature,
+  .wl-feature:last-child {
+    border-bottom: 0;
+  }
+}

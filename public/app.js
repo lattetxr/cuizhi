@@ -583,20 +583,9 @@ function getTypeConfig() {
 }
 
 function renderTypeBanner() {
-  // 顶部只展示系统推荐的学习功能，不再提供容易误解的内容类型下拉切换。
+  // 功能页顶部不展示类型胶囊、下拉框或额外推荐提示，只保留唯一推荐页签。
   $$('.type-banner').forEach((banner) => banner.remove());
   $('#typeSwitchMenu')?.remove();
-
-  const notice = $('#degradedNotice');
-  const cfg = getTypeConfig();
-  const primaryLabel = TAB_LABELS[cfg.primary] || '推荐内容';
-  const banner = document.createElement('div');
-  banner.className = 'type-banner';
-  banner.innerHTML = `
-    <span class="type-badge" aria-label="当前推荐功能">✦ 推荐先看</span>
-    <span class="type-advice">${cfg.emoji} 这包内容建议先从「${escapeHtml(primaryLabel)}」开始。</span>
-  `;
-  notice.parentNode.insertBefore(banner, notice);
 }
 
 function applyTypeLayout(autoTab) {
@@ -610,14 +599,7 @@ function applyTypeLayout(autoTab) {
     const isRecommended = tab === primary;
     btn.hidden = !isRecommended;
     btn.classList.toggle('dimmed', false);
-    const oldBadge = btn.querySelector('.rec-badge');
-    if (oldBadge) oldBadge.remove();
-    if (isRecommended) {
-      const badge = document.createElement('span');
-      badge.className = 'rec-badge';
-      badge.textContent = '✦推荐';
-      btn.appendChild(badge);
-    }
+    btn.querySelectorAll('.rec-badge').forEach((badge) => badge.remove());
   });
 
   // 推荐功能放在第一个
