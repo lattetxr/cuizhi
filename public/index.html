@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=14">
+  <link rel="stylesheet" href="/styles.css?v=15">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -360,126 +360,208 @@
       </div>
 
       <div id="demoScene" class="demo-scene">
-        <!-- 场景 0：开场 -->
+        <!-- 场景 0：矿工看山开场 -->
         <div class="demo-scene-item active" data-scene="0">
-          <div class="scene-greet">
-            <img class="scene-lks" src="/assets/liukanshan/greet.gif" alt="">
-            <div class="scene-bubble">
+          <div class="mine-opening">
+            <div class="mine-arch" aria-hidden="true">
+              <span class="mine-track track-left"></span>
+              <span class="mine-track track-right"></span>
+              <span class="mine-gem gem-a">✦</span>
+              <span class="mine-gem gem-b">◆</span>
+              <span class="mine-gem gem-c">✦</span>
+            </div>
+            <div class="miner-mascot miner-xl">
+              <span class="miner-pickaxe" aria-hidden="true"><i></i></span>
+              <img class="scene-miner-img" src="/assets/liukanshan/greet.gif" alt="矿工形象的看山">
+              <span class="miner-helmet" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="scene-bubble mine-bubble">
               <span class="bubble-text" id="greetText"></span>
             </div>
+            <div class="mine-opening-copy">
+              <span class="demo-eyebrow">知乎授权收藏夹 · 整夹炼金</span>
+              <h2>整座收藏矿脉，一次炼成知识金锭</h2>
+              <p>矿工看山深入你的知乎收藏夹，筛选高价值内容，重建知识框架。</p>
+            </div>
           </div>
         </div>
 
-        <!-- 场景 1：介绍 -->
+        <!-- 场景 1：授权收藏夹扫描 -->
         <div class="demo-scene-item" data-scene="1">
-          <div class="scene-intro">
-            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/thinking.gif" alt="">
-            <div class="intro-text">
+          <div class="mine-demo-grid">
+            <aside class="mine-side-panel">
+              <div class="miner-mascot miner-md">
+                <span class="miner-pickaxe" aria-hidden="true"><i></i></span>
+                <img src="/assets/liukanshan/thinking.gif" alt="">
+                <span class="miner-helmet" aria-hidden="true"><i></i></span>
+              </div>
+              <span class="demo-eyebrow">OAuth 安全读取</span>
               <h2 class="typewriter" id="introTitle"></h2>
               <p class="typewriter-sub" id="introSub"></p>
-            </div>
+              <div class="mine-stat-row">
+                <span><strong>128</strong><em>篇收藏</em></span>
+                <span><strong>4</strong><em>条矿脉</em></span>
+                <span><strong>24</strong><em>张金卡</em></span>
+              </div>
+            </aside>
+
+            <section class="collection-browser" aria-label="授权收藏夹扫描演示">
+              <div class="collection-browser-head">
+                <div>
+                  <span class="demo-folder-mark">夹</span>
+                  <div>
+                    <strong>产品思考收藏夹</strong>
+                    <p>授权后读取 · 示例收藏夹</p>
+                  </div>
+                </div>
+                <span class="oauth-badge">知乎授权</span>
+              </div>
+              <div class="scan-line" aria-hidden="true"></div>
+              <div class="ore-list">
+                <article class="ore-row ore-blue">
+                  <span class="ore-type">回答</span>
+                  <div>
+                    <h4>大模型应用，如何判断真实用户价值？</h4>
+                    <cite>产品老陈 · 1.2k 赞同 · 知乎原文</cite>
+                  </div>
+                  <span class="quality-tag">高赞</span>
+                </article>
+                <article class="ore-row ore-gold">
+                  <span class="ore-type">文章</span>
+                  <div>
+                    <h4>为什么碎片化学习很难形成自己的体系？</h4>
+                    <cite>学习科学笔记 · 867 赞同 · 知乎原文</cite>
+                  </div>
+                  <span class="quality-tag">深度</span>
+                </article>
+                <article class="ore-row ore-green">
+                  <span class="ore-type">回答</span>
+                  <div>
+                    <h4>年轻人怎样建立可迁移的职业能力？</h4>
+                    <cite>职场观察室 · 589 赞同 · 知乎原文</cite>
+                  </div>
+                  <span class="quality-tag">代表观点</span>
+                </article>
+                <article class="ore-row ore-purple">
+                  <span class="ore-type">想法</span>
+                  <div>
+                    <h4>需求访谈里，如何区分用户观点与真实行为？</h4>
+                    <cite>用户研究员小林 · 456 赞同 · 知乎原文</cite>
+                  </div>
+                  <span class="quality-tag">方法</span>
+                </article>
+              </div>
+              <div class="collection-browser-foot">
+                <span>跨主题取样</span>
+                <span>保留作者出处</span>
+                <span>过滤低信息重复内容</span>
+              </div>
+            </section>
           </div>
         </div>
 
-        <!-- 场景 2：输入选择 -->
+        <!-- 场景 2：矿工分拣知识矿石 -->
         <div class="demo-scene-item" data-scene="2">
-          <div class="scene-input">
-            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/idle.gif" alt="">
-            <p class="scene-input-hint">选择一种输入方式开始炼金</p>
-            <div class="input-options">
-              <button class="input-option" data-demo-type="link">
-                <span class="option-icon">🔗</span>
-                <strong>粘贴链接</strong>
-                <span>知乎问题/回答/文章</span>
-              </button>
-              <button class="input-option" data-demo-type="favlist">
-                <span class="option-icon">📦</span>
-                <strong>导入收藏夹</strong>
-                <span>一键批量炼金</span>
-              </button>
+          <div class="mine-classify">
+            <div class="demo-section-heading">
+              <span class="demo-eyebrow">整夹分拣 · 不只取最近几条</span>
+              <h2>看山按主题、角色和作者，把矿石放进不同矿脉</h2>
+              <p>概念负责打底，经验提供证据，争议形成观点光谱，方法沉淀为行动卡片。</p>
+            </div>
+            <div class="classify-stage">
+              <div class="mine-crane" aria-hidden="true">
+                <span class="crane-beam"></span>
+                <span class="crane-rope"><i></i></span>
+                <span class="crane-claw"></span>
+                <span class="miner-mascot miner-xs crane-operator">
+                  <img src="/assets/liukanshan/working.gif" alt="">
+                  <span class="miner-helmet"><i></i></span>
+                </span>
+              </div>
+              <div class="raw-ore-stack">
+                <span class="raw-ore r1">概念</span>
+                <span class="raw-ore r2">争议</span>
+                <span class="raw-ore r3">经验</span>
+                <span class="raw-ore r4">方法</span>
+              </div>
+              <div class="classify-arrow">→</div>
+              <div class="topic-bins">
+                <article><strong>AI 产品</strong><span>38 篇</span><small>判断力 · 场景价值</small></article>
+                <article><strong>学习方法</strong><span>31 篇</span><small>体系化 · 间隔复习</small></article>
+                <article><strong>职业成长</strong><span>27 篇</span><small>能力迁移 · 决策</small></article>
+                <article><strong>用户洞察</strong><span>32 篇</span><small>访谈 · 行为证据</small></article>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 场景 3-6：炼金动画 -->
+        <!-- 场景 3：整夹认知地图成金 -->
         <div class="demo-scene-item" data-scene="3">
-          <div class="scene-alchemy">
-            <div class="furnace-container">
-              <svg class="furnace-svg" viewBox="0 0 200 240">
-                <ellipse class="furnace-body" cx="100" cy="160" rx="70" ry="60" fill="#2d2d2d"/>
-                <ellipse class="furnace-top" cx="100" cy="105" rx="50" ry="15" fill="#3d3d3d"/>
-                <g class="furnace-flame" id="furnaceFlame">
-                  <ellipse cx="100" cy="140" rx="20" ry="30" fill="#f5a623" opacity="0.8"/>
-                  <ellipse cx="100" cy="135" rx="14" ry="22" fill="#ff6b35" opacity="0.9"/>
-                  <ellipse cx="100" cy="130" rx="8" ry="14" fill="#fff3e0"/>
-                </g>
-                <g class="furnace-smoke" id="furnaceSmoke">
-                  <circle cx="100" cy="80" r="6" fill="#ccc" opacity="0.4"/>
-                  <circle cx="90" cy="60" r="5" fill="#ccc" opacity="0.3"/>
-                  <circle cx="110" cy="50" r="4" fill="#ccc" opacity="0.2"/>
-                </g>
+          <div class="map-forge">
+            <div class="demo-section-heading compact">
+              <span class="demo-eyebrow">认知地图 · 推荐先看</span>
+              <h2>先看见整夹骨架，再决定从哪里开始学</h2>
+            </div>
+            <div class="knowledge-map-demo">
+              <svg class="knowledge-lines" viewBox="0 0 640 300" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M320 150 C240 120 170 88 92 62"></path>
+                <path d="M320 150 C410 110 480 86 548 62"></path>
+                <path d="M320 150 C235 190 165 218 92 238"></path>
+                <path d="M320 150 C410 195 480 220 548 238"></path>
               </svg>
-              <img class="scene-lks furnace-lks" id="alchemyLks" src="/assets/liukanshan/working.gif" alt="">
+              <div class="map-demo-node core">整夹知识框架<small>128 篇内容归一</small></div>
+              <div class="map-demo-node n1">AI 产品<small>38</small></div>
+              <div class="map-demo-node n2">学习方法<small>31</small></div>
+              <div class="map-demo-node n3">职业成长<small>27</small></div>
+              <div class="map-demo-node n4">用户洞察<small>32</small></div>
             </div>
-            <div class="alchemy-progress-steps">
-              <div class="alchemy-p-step active" data-step="0">
-                <span class="p-step-icon">淬</span>
-                <span class="p-step-label">提取核心</span>
-              </div>
-              <div class="alchemy-p-step" data-step="1">
-                <span class="p-step-icon">炼</span>
-                <span class="p-step-label">梳理结构</span>
-              </div>
-              <div class="alchemy-p-step" data-step="2">
-                <span class="p-step-icon">固</span>
-                <span class="p-step-label">生成卡片</span>
-              </div>
-              <div class="alchemy-p-step" data-step="3">
-                <span class="p-step-icon">验</span>
-                <span class="p-step-label">查漏补缺</span>
-              </div>
-            </div>
-            <div class="alchemy-status-text">
-              <span class="status-dot"></span>
-              <span id="demoStatusText">看山正在帮你提炼精华～</span>
-            </div>
-            <div class="alchemy-particles" id="alchemyParticles"></div>
+            <ol class="map-path-strip">
+              <li><b>1</b><span>建立骨架</span></li>
+              <li><b>2</b><span>理解分歧</span></li>
+              <li><b>3</b><span>生成卡片</span></li>
+              <li><b>4</b><span>对练输出</span></li>
+            </ol>
           </div>
         </div>
 
-        <!-- 场景 7：成果展示 -->
-        <div class="demo-scene-item" data-scene="7">
-          <div class="scene-result">
-            <img class="scene-lks scene-lks-small" src="/assets/liukanshan/playful.gif" alt="">
-            <div class="result-tabs">
-              <div class="result-tab active" data-tab="viewpoint">
-                <span class="tab-icon">📊</span>
-                <span>观点光谱</span>
+        <!-- 场景 4：高质量学习包成果 -->
+        <div class="demo-scene-item" data-scene="4">
+          <div class="scene-result mine-result">
+            <div class="result-heading">
+              <div>
+                <span class="demo-eyebrow">一夹四炼 · 可复习也可输出</span>
+                <h2>整夹炼金成果</h2>
               </div>
-              <div class="result-tab" data-tab="map">
-                <span class="tab-icon">🗺️</span>
-                <span>认知地图</span>
+            </div>
+            <div class="result-tabs">
+              <div class="result-tab active" data-tab="map">
+                <span class="tab-icon">◆</span><span>认知地图</span>
+              </div>
+              <div class="result-tab" data-tab="viewpoint">
+                <span class="tab-icon">▱</span><span>观点光谱</span>
               </div>
               <div class="result-tab" data-tab="cards">
-                <span class="tab-icon">🃏</span>
-                <span>复习卡片</span>
+                <span class="tab-icon">◇</span><span>复习卡片</span>
               </div>
               <div class="result-tab" data-tab="coach">
-                <span class="tab-icon">💬</span>
-                <span>看山对练</span>
+                <span class="tab-icon">◌</span><span>看山对练</span>
               </div>
             </div>
             <div class="result-preview" id="resultPreview"></div>
           </div>
         </div>
 
-        <!-- 场景 8：CTA 结尾 -->
-        <div class="demo-scene-item" data-scene="8">
-          <div class="scene-cta">
-            <img class="scene-lks scene-lks-large" src="/assets/liukanshan/greet.gif" alt="">
+        <!-- 场景 5：CTA 结尾 -->
+        <div class="demo-scene-item" data-scene="5">
+          <div class="scene-cta mine-cta">
+            <div class="miner-mascot miner-lg">
+              <span class="miner-pickaxe" aria-hidden="true"><i></i></span>
+              <img class="scene-lks-large" src="/assets/liukanshan/greet.gif" alt="">
+              <span class="miner-helmet" aria-hidden="true"><i></i></span>
+            </div>
             <h2 class="cta-title">收藏会吃灰<br><em>炼过才是你的</em></h2>
-            <p class="cta-sub">把知乎收藏交给淬知，炼成可复习、可输出的学习包</p>
-            <button class="cta-btn" id="ctaBtn">现在就去炼金 <span>→</span></button>
+            <p class="cta-sub">授权知乎收藏夹，让矿工看山把一整夹资料整理成知识框架、复习卡片和输出草稿。</p>
+            <button class="cta-btn" id="ctaBtn">授权并整夹炼金 <span>→</span></button>
           </div>
         </div>
       </div>
@@ -491,6 +573,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=14"></script>
+  <script type="module" src="/app.js?v=15"></script>
 </body>
 </html>

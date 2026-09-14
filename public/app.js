@@ -2577,21 +2577,17 @@ const demoState = {
   timer: null,
   sceneTimer: null,
   typewriterTimer: null,
+  resultTimer: null,
 };
 
-const SCENE_DURATIONS = [3500, 4500, 0, 13000, 5000, 0];
-const STATUS_TEXTS = [
-  '正在提取核心观点...',
-  '正在梳理概念体系...',
-  '正在生成复习卡片...',
-  '正在准备对练场景...',
-];
+const DEMO_RESULT_TABS = ['map', 'viewpoint', 'cards', 'coach'];
+const DEMO_TAB_DURATION = 2200;
 
 function initDemoParticles() {
   const container = document.getElementById('demoParticles');
   if (!container) return;
   container.innerHTML = '';
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 36; i++) {
     const p = document.createElement('div');
     p.className = 'demo-particle';
     p.style.left = Math.random() * 100 + '%';
@@ -2601,7 +2597,7 @@ function initDemoParticles() {
   }
 }
 
-function typeWriter(element, text, speed = 50) {
+function typeWriter(element, text, speed = 42) {
   return new Promise(resolve => {
     if (!element) { resolve(); return; }
     clearTimeout(demoState.typewriterTimer);
@@ -2620,7 +2616,7 @@ function typeWriter(element, text, speed = 50) {
         setTimeout(() => {
           cursor.remove();
           resolve();
-        }, 500);
+        }, 420);
       }
     }
     type();
@@ -2629,6 +2625,7 @@ function typeWriter(element, text, speed = 50) {
 
 function switchDemoScene(index) {
   demoState.scene = index;
+  clearTimeout(demoState.resultTimer);
 
   $$('.demo-scene-item').forEach((el, i) => {
     el.classList.toggle('active', i === index);
@@ -2641,30 +2638,29 @@ function switchDemoScene(index) {
 
   switch (index) {
     case 0:
-      typeWriter($('#greetText'), '嗨！我是看山，帮你把收藏炼成知识～').then(() => {
-        scheduleNextScene(1000);
-      }).catch(err => console.error('[demo] scene0 error:', err));
+      typeWriter($('#greetText'), '我是矿工看山，今天帮你把整个收藏夹挖出知识金矿！', 38)
+        .then(() => scheduleNextScene(900))
+        .catch(err => console.error('[demo] scene0 error:', err));
       break;
 
     case 1:
-      typeWriter($('#introTitle'), '收藏会吃灰，炼过才是你的').then(() => {
-        return typeWriter($('#introSub'), '把知乎上"收藏后吃灰"的优质内容，炼成可复习、可再创作的学习包');
-      }).then(() => {
-        scheduleNextScene(1000);
-      }).catch(err => console.error('[demo] scene1 error:', err));
+      typeWriter($('#introTitle'), '授权整个收藏夹，先筛选高价值矿石', 30)
+        .then(() => typeWriter($('#introSub'), '看山不会只按时间取前几条，而是跨主题挑选代表回答，并保留知乎原文链接、作者与赞同信息。', 18))
+        .then(() => scheduleNextScene(2300))
+        .catch(err => console.error('[demo] scene1 error:', err));
       break;
 
     case 2:
-      scheduleNextScene(3000);
+      scheduleNextScene(7600);
       break;
 
     case 3:
-      startAlchemyAnimation();
+      scheduleNextScene(7000);
       break;
 
     case 4:
       startResultPreview();
-      scheduleNextScene(5000);
+      scheduleNextScene(DEMO_RESULT_TABS.length * DEMO_TAB_DURATION + 700);
       break;
 
     case 5:
@@ -2676,144 +2672,120 @@ function scheduleNextScene(delay) {
   clearTimeout(demoState.sceneTimer);
   demoState.sceneTimer = setTimeout(() => {
     const total = $$('.demo-scene-item').length;
-    if (!demoState.paused && demoState.scene < total - 1) {
+    if (demoState.active && !demoState.paused && demoState.scene < total - 1) {
       switchDemoScene(demoState.scene + 1);
     }
   }, delay);
 }
 
-function startAlchemyAnimation() {
-  demoState.alchemyStep = 0;
-  runAlchemyStep();
-}
-
-function runAlchemyStep() {
-  if (demoState.alchemyStep >= 4) {
-    switchDemoScene(4);
-    return;
-  }
-
-  $$('.alchemy-p-step').forEach((el, i) => {
-    el.classList.remove('active', 'done');
-    if (i < demoState.alchemyStep) el.classList.add('done');
-    if (i === demoState.alchemyStep) el.classList.add('active');
-  });
-
-  $('#demoStatusText').textContent = STATUS_TEXTS[demoState.alchemyStep];
-
-  createAlchemyParticles();
-
-  const lks = $('#alchemyLks');
-  if (lks) {
-    lks.src = demoState.alchemyStep === 3
-      ? '/assets/liukanshan/thinking.gif'
-      : '/assets/liukanshan/working.gif';
-  }
-
-  demoState.alchemyStep++;
-  demoState.timer = setTimeout(runAlchemyStep, 3000);
-}
-
-function createAlchemyParticles() {
-  const container = document.getElementById('alchemyParticles');
-  if (!container) return;
-
-  for (let i = 0; i < 12; i++) {
-    const p = document.createElement('div');
-    p.className = 'alchemy-particle';
-    const startX = Math.random() * 100;
-    const startY = Math.random() < 0.5 ? 0 : 100;
-    p.style.left = startX + '%';
-    p.style.top = startY + '%';
-    p.style.animationDelay = (i * 0.1) + 's';
-    container.appendChild(p);
-    setTimeout(() => p.remove(), 2500);
-  }
-}
-
 function startResultPreview() {
-  const tabs = ['viewpoint', 'map', 'cards', 'coach'];
   let tabIdx = 0;
+  const preview = $('#resultPreview');
 
-  function switchTab() {
-    if (!demoState.active || demoState.scene !== 4) return;
+  function renderTab() {
+    if (!demoState.active || demoState.paused || demoState.scene !== 4) return;
 
-    $$('.result-tab').forEach((el, i) => {
-      el.classList.toggle('active', i === tabIdx);
+    const tab = DEMO_RESULT_TABS[tabIdx];
+    $$('.result-tab').forEach((el) => {
+      el.classList.toggle('active', el.dataset.tab === tab);
     });
 
-    const preview = $('#resultPreview');
     if (preview) {
-      preview.innerHTML = getPreviewHTML(tabs[tabIdx]);
+      preview.innerHTML = getPreviewHTML(tab);
     }
 
-    tabIdx = (tabIdx + 1) % tabs.length;
-    setTimeout(switchTab, 1200);
+    tabIdx = (tabIdx + 1) % DEMO_RESULT_TABS.length;
+    demoState.resultTimer = setTimeout(renderTab, DEMO_TAB_DURATION);
   }
 
-  switchTab();
+  renderTab();
 }
 
 function getPreviewHTML(tab) {
   const previews = {
-    viewpoint: `
-      <div style="text-align:center;padding:40px;">
-        <div style="display:flex;justify-content:center;gap:40px;margin-bottom:24px;">
-          <div style="text-align:center;">
-            <div style="font-size:48px;font-weight:700;color:#0084ff;">45%</div>
-            <div style="color:#6b7078;margin-top:4px;">支持</div>
+    map: `
+      <div class="pv-map">
+        <section class="pv-panel">
+          <h4>整夹知识框架</h4>
+          <p class="pv-panel-sub">按主题占比重建收藏夹骨架，而不是把文章简单堆在一起</p>
+          <div class="pv-bar-row">
+            <div class="pv-bar-head"><span>AI 产品判断</span><b>38 篇</b></div>
+            <div class="pv-bar"><i style="width:82%"></i></div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:48px;font-weight:700;color:#8e8e93;">35%</div>
-            <div style="color:#6b7078;margin-top:4px;">中立</div>
+          <div class="pv-bar-row">
+            <div class="pv-bar-head"><span>用户洞察方法</span><b>32 篇</b></div>
+            <div class="pv-bar"><i style="width:70%"></i></div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:48px;font-weight:700;color:#ff3b30;">20%</div>
-            <div style="color:#6b7078;margin-top:4px;">质疑</div>
+          <div class="pv-bar-row">
+            <div class="pv-bar-head"><span>学习与复盘</span><b>31 篇</b></div>
+            <div class="pv-bar"><i style="width:66%"></i></div>
           </div>
-        </div>
-        <div style="color:#6b7078;font-size:14px;">多立场分布与共识分歧，「信谁的」一眼看懂</div>
+          <div class="pv-bar-row">
+            <div class="pv-bar-head"><span>职业能力迁移</span><b>27 篇</b></div>
+            <div class="pv-bar"><i style="width:58%"></i></div>
+          </div>
+        </section>
+        <section class="pv-panel">
+          <h4>推荐消化路径</h4>
+          <p class="pv-panel-sub">先建立全局框架，再进入观点、卡片和输出训练</p>
+          <div class="pv-steps">
+            <div class="pv-step"><b>1</b><div><strong>建立骨架</strong><span>理解四个主题之间如何互相支撑</span></div></div>
+            <div class="pv-step"><b>2</b><div><strong>比较分歧</strong><span>同题保留不同立场与代表回答</span></div></div>
+            <div class="pv-step"><b>3</b><div><strong>间隔复习</strong><span>关键概念进入 1/3/7/21 天计划</span></div></div>
+            <div class="pv-step"><b>4</b><div><strong>对练输出</strong><span>看山扮演反方，逼出完整回答草稿</span></div></div>
+          </div>
+        </section>
       </div>
     `,
-    map: `
-      <div style="text-align:center;padding:40px;">
-        <svg width="300" height="150" viewBox="0 0 300 150">
-          <path d="M30,130 Q80,30 150,80 T270,50" stroke="#f5a623" stroke-width="3" fill="none" stroke-dasharray="5,5"/>
-          <circle cx="30" cy="130" r="15" fill="#0084ff"/>
-          <circle cx="150" cy="80" r="15" fill="#f5a623"/>
-          <circle cx="270" cy="50" r="15" fill="#34c759"/>
-          <text x="30" y="135" text-anchor="middle" fill="#fff" font-size="12">基础</text>
-          <text x="150" y="85" text-anchor="middle" fill="#fff" font-size="12">核心</text>
-          <text x="270" y="55" text-anchor="middle" fill="#fff" font-size="12">进阶</text>
-        </svg>
-        <div style="color:#6b7078;margin-top:16px;font-size:14px;">概念体系 + 学习路径，碎片变体系</div>
+    viewpoint: `
+      <div class="pv-spectrum">
+        <article class="pv-stance support">
+          <div class="pv-stance-head"><span>支持落地</span><b>45%</b></div>
+          <p>“先验证高频任务和替代成本，再判断模型能力是否带来真实留存。”</p>
+          <cite>产品老陈 · 1.2k 赞同 · 知乎原文</cite>
+        </article>
+        <article class="pv-stance neutral">
+          <div class="pv-stance-head"><span>谨慎中立</span><b>35%</b></div>
+          <p>“技术演示和长期使用是两件事，小规模试点能降低误判风险。”</p>
+          <cite>AI 转型笔记 · 786 赞同 · 知乎原文</cite>
+        </article>
+        <article class="pv-stance doubt">
+          <div class="pv-stance-head"><span>提出质疑</span><b>20%</b></div>
+          <p>“如果流程没有闭环，单点提效很容易被接入成本和信任成本抵消。”</p>
+          <cite>一线研发周野 · 642 赞同 · 知乎原文</cite>
+        </article>
       </div>
     `,
     cards: `
-      <div style="display:flex;justify-content:center;gap:20px;padding:40px;">
-        <div style="width:180px;height:120px;background:#fef4e5;border:2px solid #f5a623;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:#f5a623;">
-          存在先于本质
-        </div>
-        <div style="width:180px;height:120px;background:#e8f3ff;border:2px solid #0084ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#0084ff;padding:12px;text-align:center;">
-          人首先存在，然后通过选择定义自己
+      <div class="pv-cards">
+        <div class="pv-flashcard front">价值验证三角</div>
+        <div class="pv-flashcard back">从高频任务、替代成本、复用频次三个信号判断一个 AI 功能是否值得持续投入。</div>
+        <div class="pv-schedule">
+          自动进入间隔复习
+          <span>1 天</span><span>3 天</span><span>7 天</span><span>21 天</span>
         </div>
       </div>
-      <div style="text-align:center;color:#6b7078;font-size:14px;">概念卡 + 1/3/7/21 天间隔复习</div>
     `,
     coach: `
-      <div style="padding:20px;">
-        <div style="display:flex;gap:12px;margin-bottom:16px;">
-          <img src="/assets/liukanshan/idle.gif" style="width:40px;height:40px;">
-          <div style="background:#f2f2f7;padding:12px 16px;border-radius:12px;flex:1;font-size:14px;">
-            我认为存在主义强调个体自由是有道理的...
-          </div>
+      <div class="pv-coach">
+        <div class="pv-message ai">
+          <span class="miner-mascot miner-xs pv-mini">
+            <img src="/assets/liukanshan/idle.gif" alt="">
+            <span class="miner-helmet" aria-hidden="true"><i></i></span>
+          </span>
+          <div class="pv-bubble">如果用户只在第一次觉得新奇，四周后不再回来，这个功能还应该继续投入吗？</div>
         </div>
-        <div style="display:flex;gap:12px;justify-content:flex-end;">
-          <div style="background:#e8f3ff;padding:12px 16px;border-radius:12px;flex:1;text-align:right;font-size:14px;">
-            但这种自由是否过于理想化？在现实社会中...
-          </div>
+        <div class="pv-message user">
+          <span class="pv-user-dot">我</span>
+          <div class="pv-bubble">不一定立刻砍掉，应先拆成任务频次、替代成本和留存缺口三个指标继续验证。</div>
         </div>
-        <div style="text-align:center;color:#6b7078;margin-top:16px;font-size:14px;">AI 扮反方 3 轮对练，输出回答草稿</div>
+        <div class="pv-message ai">
+          <span class="miner-mascot miner-xs pv-mini">
+            <img src="/assets/liukanshan/thinking.gif" alt="">
+            <span class="miner-helmet" aria-hidden="true"><i></i></span>
+          </span>
+          <div class="pv-bubble">很好，再补一个反例：什么情况下“低频次”也可能成立？三轮对练后自动整理成回答草稿。</div>
+        </div>
       </div>
     `,
   };
@@ -2833,7 +2805,13 @@ function openDemo() {
       return;
     }
     modal.hidden = false;
+    modal.classList.remove('demo-paused');
     document.body.classList.add('demo-open');
+    const pauseBtn = $('#demoPauseBtn');
+    if (pauseBtn) {
+      pauseBtn.textContent = '⏸';
+      pauseBtn.title = '暂停';
+    }
 
     initDemoParticles();
     switchDemoScene(0);
@@ -2855,22 +2833,30 @@ function closeDemo() {
 function toggleDemoPause() {
   demoState.paused = !demoState.paused;
   const btn = $('#demoPauseBtn');
-  if (btn) btn.textContent = demoState.paused ? '▶' : '⏸';
+  const modal = $('#demoModal');
+  if (btn) {
+    btn.textContent = demoState.paused ? '▶' : '⏸';
+    btn.title = demoState.paused ? '继续' : '暂停';
+  }
+  if (modal) modal.classList.toggle('demo-paused', demoState.paused);
+
+  clearTimeout(demoState.timer);
+  clearTimeout(demoState.sceneTimer);
+  clearTimeout(demoState.resultTimer);
 
   if (!demoState.paused) {
-    scheduleNextScene(1000);
-  } else {
-    clearTimeout(demoState.timer);
-    clearTimeout(demoState.sceneTimer);
+    if (demoState.scene === 4) {
+      startResultPreview();
+      scheduleNextScene(DEMO_RESULT_TABS.length * DEMO_TAB_DURATION + 700);
+    } else {
+      scheduleNextScene(700);
+    }
   }
-}
-
-function selectDemoInput(type) {
-  switchDemoScene(3);
 }
 
 function enterAppFromDemo() {
   closeDemo();
+  enterApp();
 }
 
 document.addEventListener('click', (e) => {
@@ -2878,8 +2864,6 @@ document.addEventListener('click', (e) => {
     closeDemo();
   } else if (e.target.closest('#demoPauseBtn')) {
     toggleDemoPause();
-  } else if (e.target.closest('[data-demo-type]')) {
-    selectDemoInput(e.target.closest('[data-demo-type]').dataset.demoType);
   } else if (e.target.closest('#ctaBtn')) {
     enterAppFromDemo();
   }
