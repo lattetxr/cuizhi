@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildCollectionConcepts,
   buildFavlistFramework,
   favItemsToAnswers,
   normalizeFavlistItem,
@@ -102,6 +103,25 @@ test('整夹炼金会跨主题轮选代表内容，避免只按时间顺序取�
   const answers = favItemsToAnswers(selected);
   assert.equal(answers.length, 6);
   assert.ok(answers.every((answer) => answer.answerId && answer.title && answer.url));
+});
+
+test('整夹概念按真实收藏夹主题生成短概念和专属解释', () => {
+  const framework = buildFavlistFramework(items);
+  const selected = selectRepresentativeItems(items, 6);
+  const concepts = buildCollectionConcepts(framework, selected);
+
+  assert.ok(concepts.length >= 5);
+  for (const concept of concepts) {
+    assert.ok(concept.term.length <= 8, `${concept.term} 应是短概念`);
+    assert.doesNotMatch(concept.term, /[。！？!?；;：:]/);
+    assert.doesNotMatch(concept.term, /如何|怎么|为什么|是否|该不该/);
+    assert.match(concept.definition, /知识矿脉/);
+    assert.match(concept.definition, /篇收藏/);
+    assert.ok(concept.example);
+  }
+
+  const selectedIds = new Set(selected.map((item) => String(item.id)));
+  assert.ok(concepts.every((concept) => concept.source_answer_ids.every((id) => selectedIds.has(String(id)))));
 });
 
 const { toMarkdown, toHtml } = await import('../lib/export.mjs');

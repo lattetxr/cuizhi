@@ -110,23 +110,20 @@ const state = {
     cards: [],
     index: 0,
     flipped: false,
-    filter: 'all',
+    filter: 'concept',
     grades: {},
     completed: false,
   },
 };
 
-let tourStep = 0;
-
 const CARD_TYPE_LABELS = {
-  concept: '概念卡',
+  concept: '概念',
   viewpoint: '观点卡',
   scenario: '情景题',
   compare: '对比卡',
-  mindmap: '思维导图',
 };
 
-const CARD_TYPE_KEYS = ['concept', 'mindmap'];
+const CARD_TYPE_KEYS = ['concept'];
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -447,6 +444,7 @@ function showEmpty() {
   $$('.type-banner').forEach((banner) => banner.remove());
   $('#typeSwitchMenu')?.remove();
   $('#tabContent').innerHTML = '';
+  closePackageGuide();
 }
 
 function setPackageTab(name) {
@@ -558,10 +556,10 @@ function renderPackage(pkg) {
   if (state.visual.pkgId !== pkg.id) {
     state.visual = {
       pkgId: pkg.id,
-      cards: pkg.visualCards || [],
+      cards: normalizeVisualCards(pkg.visualCards || []),
       index: 0,
       flipped: false,
-      filter: 'all',
+      filter: 'concept',
       grades: {},
       completed: false,
     };
@@ -573,6 +571,7 @@ function renderPackage(pkg) {
   state.embeddedExpanded = false;
   renderTypeBanner();
   applyTypeLayout(true);
+  maybeShowPackageGuide();
 }
 
 function getTypeConfig() {
@@ -1035,10 +1034,51 @@ function weakCards(pkg) {
     .filter((item) => item.card && item.last && item.last.grade !== 'good');
 }
 
+function normalizeConceptTerm(value) {
+  let text = String(value || '')
+    .replace(/^#+\s*/, '')
+    .replace(/^[\d一二三四五六七八九十]+[.、\s\-—）)]*\s*/, '')
+    .replace(/[*_`"“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  text = text.split(/[。！？!?；;：:]/)[0].trim();
+  text = text.split(/是指|就是指|指的是|就是|在于/)[0].trim();
+  text = text.replace(/^(.+?)(为什么|为何)(.+)$/, '$1');
+  text = text.replace(/^(.+?)(是否|该不该|能不能|可不可以|有没有)(.+)$/, '$1');
+
+  text = text
+    .replace(/^(关于|对于|有关|针对)\s*/, '')
+    .replace(/^(什么是|何为|何谓|如何理解|怎样理解|怎么理解|该如何理解)\s*/, '')
+    .replace(/^(如何|怎么|怎样|为什么|为何|是否|该不该|能不能|可不可以|有没有|有哪些)/, '')
+    .replace(/^(才能|该|应该|应当|可以|能够|有效|科学|快速|系统地?)\s*/, '')
+    .replace(/^(请\s*)?(你|我们|大家)?\s*(解释|说明|分析|谈谈|讲一讲|说说|聊聊|理解|掌握|学会|了解|建立|构建|搭建|形成|提升|提高|做好|运用|使用|利用)\s*/, '')
+    .replace(/^自己的?|自身的?/, '')
+    .replace(/(的)?(核心概念|基本概念|基础概念|概念释义|名词解释|概念|定义|含义|内涵|基本原理|基础知识)$/, '')
+    .replace(/(有效|有用|重要|必要|靠谱|值得)$/, '')
+    .replace(/[？?。！!，,、\s]+$/g, '')
+    .trim();
+
+  return text;
+}
+
+function isConceptTerm(value) {
+  const term = normalizeConceptTerm(value);
+  if (!term || /[。！？!?；;：:]/.test(term) || term.length > 12) return false;
+  if (/^(如何|怎么|怎样|为什么|为何|是否|该不该|能不能|可不可以|有没有|有哪些)/.test(term)) return false;
+  if (/^(我|你|他|她|它|我们|你们|他们|这|那|这个|那个)/.test(term)) return false;
+  return Boolean(term);
+}
+
+function normalizeVisualCards(cards = []) {
+  return cards
+    .filter((card) => card?.type === 'concept')
+    .map((card) => ({ ...card, front: normalizeConceptTerm(card.term || card.front) }))
+    .filter((card) => isConceptTerm(card.front));
+}
+
 function filteredVisualCards() {
-  const cards = state.visual.cards || [];
-  if (state.visual.filter === 'all') return cards;
-  return cards.filter((card) => card.type === state.visual.filter);
+  return normalizeVisualCards(state.visual.cards || []);
 }
 
 function visualEmpty() {
@@ -1067,53 +1107,6 @@ function visualCompletion() {
   `;
 }
 
-function mindmapSvg(card) {
-  const branches = card.branches || [];
-  const count = Math.min(5, branches.length);
-  const points = Array.from({ length: count }, (_, index) => {
-    const angle = -Math.PI / 2 + (index / Math.max(1, count - 1)) * Math.PI;
-    return {
-      x: Math.round(200 + Math.cos(angle) * 138),
-      y: Math.round(120 + Math.sin(angle) * 88),
-    };
-  });
-  const colors = ['#0066CC', '#0084FF', '#66B2FF', '#B3D9FF', '#0066CC'];
-  const curves = points
-    .map(
-      (point, index) => `
-        <path d="M 200 120 C ${Math.round(200 + (point.x - 200) * 0.45)} ${Math.round(
-          120 + (point.y - 120) * 0.3,
-        )}, ${Math.round(200 + (point.x - 200) * 0.75)} ${Math.round(
-          120 + (point.y - 120) * 0.6,
-        )}, ${point.x} ${point.y}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="3"/>`,
-    )
-    .join('');
-  const branchesSvg = points
-    .map(
-      (point, index) =>
-        `<g>
-          <rect x="${point.x - 58}" y="${point.y - 15}" width="116" height="30" rx="15" fill="${colors[index % colors.length]}"/>
-          <text x="${point.x}" y="${point.y + 4}" text-anchor="middle" font-size="11" fill="#fff" font-weight="600">${escapeHtml(
-          branches[index]?.label?.split('·')[1]?.trim() || `分支${index + 1}`,
-        )}</text>
-          <circle cx="${point.x - 36}" cy="${point.y + 26}" r="9" fill="#fff" stroke="${colors[index % colors.length]}"/>
-          <circle cx="${point.x}" cy="${point.y + 30}" r="9" fill="#fff" stroke="${colors[index % colors.length]}"/>
-          <circle cx="${point.x + 36}" cy="${point.y + 26}" r="9" fill="#fff" stroke="${colors[index % colors.length]}"/>
-        </g>`,
-    )
-    .join('');
-  return `
-    <svg class="mindmap-canvas" viewBox="0 0 400 240" role="img" aria-label="思维导图">
-      ${curves}
-      <rect x="150" y="96" width="100" height="48" rx="16" fill="#F5A623"/>
-      <text x="200" y="125" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">${escapeHtml(
-        card.center || '知识',
-      )}</text>
-      ${branchesSvg}
-    </svg>
-  `;
-}
-
 function visualFront(card) {
   if (card.type === 'compare') {
     return `
@@ -1124,27 +1117,48 @@ function visualFront(card) {
       </div>
     `;
   }
-  if (card.type === 'mindmap') {
-    return mindmapSvg(card);
-  }
-  const lines = String(card.front || '').split('\n');
-  if (card.type === 'concept') {
-    const title = lines.filter(Boolean).at(-1) || '';
-    return `<div class="card-body"><span class="concept-name">${escapeHtml(title)}</span></div>`;
-  }
-  const title = lines.shift() || '';
+  const term = normalizeConceptTerm(card.term || card.front);
   return `
-    <div class="card-body">
-      <span class="card-title">${escapeHtml(title)}</span>
-      ${lines.length ? `<br>${escapeHtml(lines.join('\n'))}` : ''}
+    <div class="card-body concept-front-body">
+      <span class="concept-eyebrow">概念</span>
+      <strong class="concept-name">${escapeHtml(term)}</strong>
+      <span class="concept-front-hint">先在心里解释一遍，再点击翻面</span>
     </div>
   `;
 }
 
+function conceptBackSections(card) {
+  if (card.definition) {
+    const exampleLabel = state.pkg?.contentType === 'collection' ? '代表收藏' : '生活化例子';
+    return `
+      <section class="concept-back-section">
+        <span class="concept-section-label">概念解释</span>
+        <p>${escapeHtml(card.definition)}</p>
+      </section>
+      ${card.example ? `
+        <section class="concept-back-section">
+          <span class="concept-section-label">${exampleLabel}</span>
+          <p>${escapeHtml(card.example)}</p>
+        </section>` : ''}
+    `;
+  }
+  return String(card.back || '')
+    .split(new RegExp('\\n{2,}'))
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block, index) => {
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      const first = lines[0] || '';
+      const rest = lines.slice(1);
+      const label = index === 0 ? '概念解释' : (['例子', '代表收藏', '生活化例子'].includes(first) ? first.replace('例子', '生活化例子') : '补充说明');
+      const text = ['例子', '代表收藏', '生活化例子'].includes(first) ? rest.join('\n') : (rest.length ? rest.join('\n') : block);
+      return `<section class="concept-back-section"><span class="concept-section-label">${escapeHtml(label)}</span><p>${escapeHtml(text)}</p></section>`;
+    })
+    .join('');
+}
+
 function visualBack(card) {
-  return `
-    <div class="card-body">${escapeHtml(card.back || '')}</div>
-  `;
+  return `<div class="card-body concept-back-body">${conceptBackSections(card)}</div>`;
 }
 
 function calendarHTML() {
@@ -1170,7 +1184,6 @@ function renderCards() {
   state.visual.flipped = false;
   const progress = Math.round(((state.visual.index + 1) / cards.length) * 100);
   const typeLabel = CARD_TYPE_LABELS[card.type] || card.type;
-  const showTour = !localStorage.getItem('cuizhi_tour_done');
   return `
     <div class="package-card visual-review">
       <div class="visual-main">
@@ -1224,24 +1237,33 @@ function renderCards() {
       </div>
       ${calendarHTML()}
     </div>
-    ${
-      showTour
-        ? `
-          <div class="tour-overlay" id="tourOverlay">
-            <div class="tour-card">
-              <h3 id="tourTitle">点击卡片或按空格键翻转</h3>
-              <p id="tourDesc">先看正面，回想答案，再翻面核对。</p>
-              <div class="tour-dots">
-                <span class="tour-dot active"></span>
-                <span class="tour-dot"></span>
-                <span class="tour-dot"></span>
-              </div>
-              <button class="button primary" id="tourNextBtn">下一步</button>
-            </div>
-          </div>`
-        : ''
-    }
   `;
+}
+
+function maybeShowPackageGuide() {
+  try {
+    if (localStorage.getItem('cuizhi_package_guide_done_v2') === '1') return;
+  } catch {}
+  openPackageGuide(false);
+}
+
+function openPackageGuide(markRead = true) {
+  const modal = $('#guideModal');
+  if (!modal) return;
+  const collectionTip = $('#guideCollectionTip');
+  if (collectionTip) collectionTip.hidden = state.pkg?.contentType !== 'collection';
+  modal.hidden = false;
+  document.body.classList.add('guide-open');
+  if (markRead) {
+    try { localStorage.setItem('cuizhi_package_guide_done_v2', '1'); } catch {}
+  }
+}
+
+function closePackageGuide() {
+  const modal = $('#guideModal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('guide-open');
 }
 
 function downloadText(filename, text, type = 'text/plain') {
@@ -1290,13 +1312,14 @@ async function generateVisualCardsFromPkg() {
   try {
     setLoading(button, true, '生成中...');
     const data = await api(`/api/packages/${state.pkg.id}/visual-cards`, { method: 'POST' });
-    state.pkg.visualCards = data.cards;
+    const visualCards = normalizeVisualCards(data.cards);
+    state.pkg.visualCards = visualCards;
     state.visual = {
       pkgId: state.pkg.id,
-      cards: data.cards,
+      cards: visualCards,
       index: 0,
       flipped: false,
-      filter: 'all',
+      filter: 'concept',
       grades: {},
       completed: false,
     };
@@ -2347,6 +2370,16 @@ function bindEvents() {
     showEmpty();
   });
 
+  $('#packageGuideBtn')?.addEventListener('click', () => openPackageGuide(false));
+  $('#guideCloseBtn')?.addEventListener('click', closePackageGuide);
+  $('#guideGotItBtn')?.addEventListener('click', () => {
+    try { localStorage.setItem('cuizhi_package_guide_done_v2', '1'); } catch {}
+    closePackageGuide();
+  });
+  $('#guideModal')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget || event.target.closest('[data-guide-close]')) closePackageGuide();
+  });
+
   $('#loginBtn').addEventListener('click', () => {
     if (state.oauth?.oauth?.waitingForDeploy) {
       toast('知乎登录暂不可用，请稍后再试');
@@ -2386,29 +2419,6 @@ function bindEvents() {
   });
 
   $('#tabContent').addEventListener('click', (event) => {
-    const tourNext = event.target.closest('#tourNextBtn');
-    if (tourNext) {
-      const overlay = document.querySelector('#tourOverlay');
-      tourStep += 1;
-      if (tourStep >= 3) {
-        localStorage.setItem('cuizhi_tour_done', '1');
-        overlay?.remove();
-        tourStep = 0;
-        return;
-      }
-      const steps = [
-        ['点击卡片或按空格键翻转', '先看正面，回想答案，再翻面核对。'],
-        ['翻转后选择掌握程度', '记住、模糊或没记住，都会影响下一次复习安排。'],
-        ['左右滑动或方向键切换', '也可以按 1 / 2 / 3 快速评分。'],
-      ];
-      $('#tourTitle').textContent = steps[tourStep][0];
-      $('#tourDesc').textContent = steps[tourStep][1];
-      $$('.tour-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === tourStep);
-      });
-      if (tourStep === 2) tourNext.textContent = '开始复习';
-      return;
-    }
     const collapse = event.target.closest('[data-collapse]');
     if (collapse) {
       const body = document.getElementById(collapse.dataset.collapse);

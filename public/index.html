@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" href="data:,">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=16">
+  <link rel="stylesheet" href="/styles.css?v=21">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -300,6 +300,7 @@
             </div>
             <div class="toolbar">
               <button id="backBtn" class="button ghost">返回</button>
+              <button id="packageGuideBtn" class="button ghost" type="button">使用提示</button>
               <a id="exportMdBtn" class="button" download>Markdown</a>
               <a id="exportHtmlBtn" class="button" download>HTML</a>
             </div>
@@ -582,7 +583,25 @@
     </div>
   </div>
 
+
+  <div id="guideModal" class="guide-modal" hidden>
+    <div class="guide-backdrop" data-guide-close></div>
+    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <button id="guideCloseBtn" class="guide-close" type="button" aria-label="关闭">×</button>
+      <div class="guide-kicker">淬知使用指南</div>
+      <h2 id="guideTitle">四步把收藏变成自己的知识</h2>
+      <p id="guideCollectionTip" class="guide-collection-tip" hidden>整夹炼金会先按收藏夹真实主题生成“认知地图”，复习概念也来自这些主题矿脉。</p>
+      <div class="guide-steps">
+        <article><span>1</span><div><strong>先看认知地图</strong><p>理解主题占比、知识骨架和推荐消化路径。</p></div></article>
+        <article><span>2</span><div><strong>正面只看概念</strong><p>每张卡正面是一个短概念，不是问题或长句。</p></div></article>
+        <article><span>3</span><div><strong>点击卡片翻面</strong><p>先自己解释，再查看概念解释、例子或代表收藏。</p></div></article>
+        <article><span>4</span><div><strong>评分安排复习</strong><p>可用方向键翻页，按 1/2/3 评分，系统据此安排复习。</p></div></article>
+      </div>
+      <button id="guideGotItBtn" class="button primary guide-confirm" type="button">知道了，开始使用</button>
+    </section>
+  </div>
+
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=17"></script>
+  <script type="module" src="/app.js?v=20"></script>
 </body>
 </html>

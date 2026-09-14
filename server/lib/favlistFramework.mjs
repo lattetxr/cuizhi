@@ -26,7 +26,7 @@ const CATEGORY_DEFS = [
     name: '科技编程',
     icon: '技',
     color: '#34C759',
-    keywords: ['编程', '代码', '前端', '后端', '算法', '人工智能', '互联网', '软件', '数据', '模型', 'Python', 'JavaScript', '产品经理', '开发'],
+    keywords: ['编程', '代码', '前端', '后端', '算法', '人工智能', 'AI', '互联网', '软件', '数据', '模型', '开源', 'Python', 'JavaScript', '产品经理', '开发'],
   },
   {
     key: 'career',
@@ -54,21 +54,21 @@ const CATEGORY_DEFS = [
     name: '生活健康',
     icon: '活',
     color: '#30B0C7',
-    keywords: ['健康', '睡眠', '运动', '饮食', '旅行', '家居', '穿搭', '美食', '健身', '养生', '生活', '习惯', '理财', '消费'],
+    keywords: ['健康', '睡眠', '运动', '饮食', '旅行', '家居', '穿搭', '美食', '健身', '养生', '生活', '习惯', '理财', '消费', '看病', '医院', '医疗', '就医'],
   },
   {
     key: 'culture',
     name: '人文社科',
     icon: '文',
     color: '#A2845E',
-    keywords: ['历史', '哲学', '社会学', '经济', '政治', '文学', '艺术', '法律', '文化', '社会', '国家', '宗教', '科学', '研究'],
+    keywords: ['历史', '哲学', '社会学', '经济', '政治', '文学', '艺术', '法律', '维权', '退费', '被骗', '证据', '文化', '社会', '国家', '宗教', '科学', '研究'],
   },
   {
     key: 'tools',
     name: '工具效率',
     icon: '效',
     color: '#5AC8FA',
-    keywords: ['工具', '软件', '效率', '自动化', 'Excel', 'Notion', '工作流', '模板', '资源', 'App', '插件', 'AI 工具'],
+    keywords: ['工具', '软件', '效率', '自动化', 'Excel', 'Notion', '工作流', '模板', '资源', '资源分享', 'App', '插件', 'AI 工具', '网站', '链接', '平台', '导航', '宝藏', '好用', '转载', '盐值'],
   },
 ];
 
@@ -154,7 +154,7 @@ export function normalizeFavlistItem(item = {}, index = 0) {
   const contentType = String(item.ContentType || '').toLowerCase() || 'other';
   const author = clean(item.Author?.Name || item.AuthorName || '知乎用户');
   return {
-    id: String(item.ContentID || item.ContentId || item.Id || idFromUrl(url, `fav-${index + 1}`)),
+    id: String(item.ContentID || item.ContentId || item.Id || item.id || idFromUrl(url, `fav-${index + 1}`)),
     title: title || '未命名收藏',
     summary,
     content: `${title}\n${summary}`,
@@ -375,4 +375,34 @@ export function favItemsToAnswers(items = []) {
     authorityLevel: 2,
     url: item.url || '',
   }));
+}
+
+export function buildCollectionConcepts(framework, representativeItems = [], limit = 6) {
+  const selectedIds = new Set((representativeItems || []).map((item) => String(item.id)));
+  return (framework.categories || [])
+    .slice(0, limit)
+    .map((category, index) => {
+      const selectedInCategory = category.items.filter((item) => selectedIds.has(String(item.id)));
+      const representatives = (selectedInCategory.length ? selectedInCategory : category.items).slice(0, 2);
+      const roleCount = new Map();
+      for (const item of category.items) {
+        if (!item.roleName) continue;
+        roleCount.set(item.roleName, (roleCount.get(item.roleName) || 0) + 1);
+      }
+      const roles = [...roleCount.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([name]) => name);
+      const percent = Math.round(category.ratio * 100);
+      const roleText = roles.length ? `，内容以${roles.join('、')}为主` : '';
+      const definition =
+        `这是整夹第 ${index + 1} 条知识矿脉，共有 ${category.count} 篇收藏归入这里，约占 ${percent}%${roleText}。` +
+        `复习时先讲清它解决什么问题，再结合下方代表收藏复述要点，并迁移到自己的学习或工作场景。`;
+      return {
+        term: category.name,
+        definition,
+        example: representatives[0]?.title || category.name,
+        source_answer_ids: representatives[0]?.id ? [String(representatives[0].id)] : [],
+      };
+    });
 }

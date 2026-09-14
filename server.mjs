@@ -17,7 +17,7 @@ import { callUserApi, USER_ENDPOINTS, fetchOAuthUser, clampLimit, normalizeOffse
 import { toHtml, toMarkdown } from './lib/export.mjs';
 import { runPipeline, runPipelineFromSource, runPipelineFromSearch, runCoachTurn, previewSearch } from './agents/pipeline.js';
 import { fetchHotList, fetchQuota } from './server/lib/zhihu.js';
-import { buildFavlistFramework, favItemsToAnswers, selectRepresentativeItems } from './server/lib/favlistFramework.mjs';
+import { buildCollectionConcepts, buildFavlistFramework, favItemsToAnswers, selectRepresentativeItems } from './server/lib/favlistFramework.mjs';
 import { NUOCI_ANSWERS, NUOCI_META } from './server/lib/nuociDataset.js';
 import { EXISTENCE_MATCH, EXISTENCE_KEYWORD, EXISTENCE_ANSWER, EXISTENCE_CARDS, EXISTENCE_VISUAL_CARDS, EXISTENCE_COACH_OPENING } from './server/lib/existenceDataset.js';
 import { KAOYAN_MATCH, KAOYAN_KEYWORD, KAOYAN_ANSWER, KAOYAN_MAP, KAOYAN_COACH_OPENING } from './server/lib/kaoyanDataset.js';
@@ -53,7 +53,7 @@ function alchemyCacheKey({ url = '', text = '', search = '', goal = '入门', an
     : '';
   return `alchemy:${goal}:${raw}:selection=${selection}`;
 }
-import { generateVisualCards } from './server/lib/visualCards.mjs';
+import { generateVisualCards, sanitizeVisualCards } from './server/lib/visualCards.mjs';
 import { cacheGet, cacheSet } from './server/lib/cache.mjs';
 // anki.mjs 依赖 node:sqlite（Node v22+），改为动态导入以兼容 v20
 
@@ -167,6 +167,9 @@ function presentPackage(pkg) {
   return {
     ...publicPkg,
     notices: publicPackageNotices(pkg),
+    visualCards: publicPkg.contentType === 'collection'
+      ? generateVisualCards(publicPkg)
+      : sanitizeVisualCards(publicPkg.visualCards || []),
   };
 }
 
@@ -656,7 +659,9 @@ app.get('/api/packages/:id/export-cards', asyncRoute(async (req, res) => {
     res.status(404).json({ ok: false, error: '学习包不存在' });
     return;
   }
-  const cards = pkg.visualCards;
+  const cards = pkg.contentType === 'collection'
+    ? generateVisualCards(pkg)
+    : sanitizeVisualCards(pkg.visualCards || []);
   if (!cards?.length) {
     res.status(400).json({ ok: false, error: '请先生成可视化复习卡片' });
     return;
@@ -936,6 +941,14 @@ app.post('/api/favlists/:urlToken/alchemy', asyncRoute(async (req, res) => {
     });
     pkg.contentType = 'collection';
     pkg.collectionFramework = framework;
+    // 整夹复习卡只从“收藏夹知识框架”的主题矿脉取概念，不能沿用普通单篇生成的泛化概念。
+    const collectionConcepts = buildCollectionConcepts(framework, representativeItems);
+    pkg.mapData = {
+      ...pkg.mapData,
+      core_concepts: collectionConcepts,
+    };
+    pkg.concepts = collectionConcepts.map(({ term, definition, example }) => ({ term, definition, example }));
+    pkg.visualCards = generateVisualCards(pkg);
     pkg.collectionMeta = {
       urlToken,
       analyzedCount: rawItems.length,
