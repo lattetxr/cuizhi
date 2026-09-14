@@ -8425,3 +8425,12 @@ ol.wl-features {
 #tabBar {
   display: none !important;
 }
+
+/* ============================================================
+   v30：欢迎页四阶段说明区水平居中
+   ============================================================ */
+.wl-features {
+  width: calc(100% - 32px);
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
