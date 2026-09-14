@@ -6,7 +6,7 @@
   <meta name="description" content="淬知：把知乎收藏炼成可复习、可再创作的学习包">
   <link rel="icon" type="image/png" href="/assets/brand-icon.png">
   <title>淬知 · 收藏炼金炉</title>
-  <link rel="stylesheet" href="/styles.css?v=24">
+  <link rel="stylesheet" href="/styles.css?v=27">
 </head>
 <body>
   <section id="welcomeView" class="welcome-view">
@@ -61,28 +61,28 @@
       </div>
     </div>
 
-    <div class="wl-features">
-      <div class="wl-feature">
-        <span class="wl-f-icon">淬</span>
-        <strong>观点光谱</strong>
-        <span>多立场分布与共识分歧，「信谁的」一眼看懂</span>
-      </div>
-      <div class="wl-feature">
-        <span class="wl-f-icon">炼</span>
-        <strong>认知地图</strong>
-        <span>概念体系 + 学习路径，碎片变体系</span>
-      </div>
-      <div class="wl-feature">
-        <span class="wl-f-icon">固</span>
-        <strong>复习卡片</strong>
-        <span>概念卡 + 1/3/7/21 天间隔复习</span>
-      </div>
-      <div class="wl-feature">
-        <span class="wl-f-icon gold">验</span>
-            <strong>看山对练</strong>
-        <span>AI 扮反方 3 轮对练，输出回答草稿</span>
-      </div>
-    </div>
+    <ol class="wl-features" aria-label="淬炼固验四个学习阶段">
+      <li class="wl-feature">
+        <span class="wl-f-icon" aria-hidden="true">淬</span>
+        <strong>看懂不同观点</strong>
+        <span>先看看大家分别怎么说，哪些意见一致，哪些地方有分歧。</span>
+      </li>
+      <li class="wl-feature">
+        <span class="wl-f-icon" aria-hidden="true">炼</span>
+        <strong>理清来龙去脉</strong>
+        <span>把零散内容串成一条清晰路线，知道先看什么、后看什么。</span>
+      </li>
+      <li class="wl-feature">
+        <span class="wl-f-icon" aria-hidden="true">固</span>
+        <strong>记住重点</strong>
+        <span>把容易忘的内容做成小卡片，按节奏提醒你复习。</span>
+      </li>
+      <li class="wl-feature">
+        <span class="wl-f-icon gold" aria-hidden="true">验</span>
+        <strong>练一练表达</strong>
+        <span>看山会连续追问，帮你把想法说清楚，并整理成回答草稿。</span>
+      </li>
+    </ol>
 
     <div class="wl-footer">
       <h3>现在就把收藏交给淬知</h3>
@@ -199,36 +199,36 @@
       </span>
       <h2>把「收藏后吃灰」炼成「理解即能力」</h2>
       <p>粘贴一条回答、一个问题或一份备考计划 —— 分别炼出概念卡、观点光谱和学习路径，最后和看山对练一轮</p>
-      <div class="process-flow">
-        <div class="process-step">
-          <span class="process-icon">淬</span>
+      <ol class="process-flow" aria-label="淬炼固验四个学习阶段">
+        <li class="process-step">
+          <span class="process-icon" aria-hidden="true">淬</span>
           <div class="process-info">
-            <strong>观点光谱</strong>
-            <span>立场分布 · 共识分歧</span>
+            <strong>看懂不同观点</strong>
+            <span>看看大家分别怎么说，分歧在哪里。</span>
           </div>
-        </div>
-        <div class="process-step">
-          <span class="process-icon">炼</span>
+        </li>
+        <li class="process-step">
+          <span class="process-icon" aria-hidden="true">炼</span>
           <div class="process-info">
-            <strong>认知地图</strong>
-            <span>概念体系 · 学习路径</span>
+            <strong>理清来龙去脉</strong>
+            <span>知道先看什么，后看什么。</span>
           </div>
-        </div>
-        <div class="process-step">
-          <span class="process-icon">固</span>
+        </li>
+        <li class="process-step">
+          <span class="process-icon" aria-hidden="true">固</span>
           <div class="process-info">
-            <strong>复习卡片</strong>
-            <span>间隔重复 · 1/3/7/21 天</span>
+            <strong>记住重点</strong>
+            <span>小卡片提醒你及时复习。</span>
           </div>
-        </div>
-        <div class="process-step gold">
-          <span class="process-icon">验</span>
+        </li>
+        <li class="process-step gold">
+          <span class="process-icon" aria-hidden="true">验</span>
           <div class="process-info">
-        <strong>看山对练</strong>
-            <span>AI 对练 · 回答草稿</span>
+            <strong>练一练表达</strong>
+            <span>看山追问后，帮你整理成回答。</span>
           </div>
-        </div>
-      </div>
+        </li>
+      </ol>
       <section id="hotSection" class="hot-section" aria-label="知乎热榜">
         <div class="hot-head">
           <h3 class="example-title">🔥 知乎热榜 · 点题开炼</h3>
@@ -610,6 +610,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script type="module" src="/app.js?v=20"></script>
+  <script type="module" src="/app.js?v=23"></script>
 </body>
 </html>

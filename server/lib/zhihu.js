@@ -602,6 +602,23 @@ export async function searchZhihu(query, { count = 10 } = {}) {
   }
 }
 
+export const FALLBACK_HOT_TOPICS = [
+  { title: '年轻人如何建立长期学习系统？', summary: '方法、节奏与复盘机制', url: 'https://www.zhihu.com/search?type=content&q=%E5%B9%B4%E8%BD%BB%E4%BA%BA%E5%A6%82%E4%BD%95%E5%BB%BA%E7%AB%8B%E9%95%BF%E6%9C%9F%E5%AD%A6%E4%B9%A0%E7%B3%BB%E7%BB%9F' },
+  { title: '第一份工作应该优先看成长还是薪资？', summary: '职业选择中的短期收益与长期复利', url: 'https://www.zhihu.com/search?type=content&q=%E7%AC%AC%E4%B8%80%E4%BB%BD%E5%B7%A5%E4%BD%9C%20%E6%88%90%E9%95%BF%20%E8%96%AA%E8%B5%84' },
+  { title: 'AI 工具会怎样改变普通人的工作方式？', summary: '效率工具、岗位变化与可迁移能力', url: 'https://www.zhihu.com/search?type=content&q=AI%20%E5%B7%A5%E5%85%B7%20%E5%B7%A5%E4%BD%9C%E6%96%B9%E5%BC%8F' },
+  { title: '怎样判断一个行业是否值得进入？', summary: '需求、周期、壁垒与个人匹配度', url: 'https://www.zhihu.com/search?type=content&q=%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E4%B8%80%E4%B8%AA%E8%A1%8C%E4%B8%9A%E6%98%AF%E5%90%A6%E5%80%BC%E5%BE%97%E8%BF%9B%E5%85%A5' },
+  { title: '收藏了很多内容却学不进去怎么办？', summary: '从信息囤积到主动加工和输出', url: 'https://www.zhihu.com/search?type=content&q=%E6%94%B6%E8%97%8F%E5%BE%88%E5%A4%9A%E5%8D%B4%E5%AD%A6%E4%B8%8D%E8%BF%9B%E5%8E%BB' },
+  { title: '备考时间紧张，如何安排复习优先级？', summary: '目标拆分、真题驱动与间隔复习', url: 'https://www.zhihu.com/search?type=content&q=%E5%A4%87%E8%80%83%E6%97%B6%E9%97%B4%E7%B4%A7%E5%BC%A0%20%E5%A6%82%E4%BD%95%E5%A4%8D%E4%B9%A0' },
+];
+
+function fallbackHotList(reason = SAMPLE_HOT_NOTICE, ttlMs = 5 * 60 * 1000) {
+  return cacheSet(
+    'zhihu:hot',
+    { demo: true, notice: reason, quotaExhausted: reason.includes('额度'), items: FALLBACK_HOT_TOPICS },
+    ttlMs,
+  );
+}
+
 export async function fetchHotList(options = {}) {
   return dedupe('hot', () => fetchHotListInner(options));
 }
@@ -612,16 +629,16 @@ async function fetchHotListInner({ limit = 20 } = {}) {
   if (cached) return cloneWithMeta(cached, { fromCache: true });
   const access = getHttpAccessSecret();
   if (shouldUseMock() || !access.value) {
-    return cacheSet(cacheKey, {
-      demo: true,
-      notice: SAMPLE_HOT_NOTICE,
-      items: mockAnswerList().slice(0, 5).map((item) => ({
-        title: item.title,
-        url: item.url,
-        summary: item.summary,
-      })),
-    });
+    return fallbackHotList(SAMPLE_HOT_NOTICE);
   }
+
+  // 热榜 API 每日额度极小（当前账号仅 2 次）。额度为 0 时不再消耗请求，直接给可点击的示例议题。
+  const quota = await fetchQuota();
+  const hotQuota = (quota.items || []).find((item) => item.APIID === 'hot_list');
+  if (hotQuota && Number(hotQuota.RemainingQuota || 0) <= 0) {
+    return fallbackHotList('今日知乎热榜额度已用完，先为你展示可开炼的示例议题');
+  }
+
   try {
     const data = await requestJson(HOT_PATH, {
       query: { Limit: normalizeLimit(limit, 20, 30) },
@@ -629,21 +646,19 @@ async function fetchHotListInner({ limit = 20 } = {}) {
       timeoutMs: 6000,
       retries: 0,
     });
-    return cacheSet(cacheKey, {
-      demo: false,
-      items: (data.Data?.Items || []).map((item) => ({
-        title: item.Title || '',
-        url: item.Url || '',
-        thumbnailUrl: item.ThumbnailUrl || '',
-        summary: item.Summary || '',
-      })),
-    });
+    const items = (data.Data?.Items || []).map((item) => ({
+      title: item.Title || '',
+      url: item.Url || '',
+      thumbnailUrl: item.ThumbnailUrl || '',
+      summary: item.Summary || '',
+    })).filter((item) => item.title);
+    if (!items.length) return fallbackHotList('今日热榜暂时为空，先为你展示示例议题');
+    return cacheSet(cacheKey, { demo: false, notice: null, items }, CACHE_TTL_MS);
   } catch (error) {
-    return cacheSet(cacheKey, {
-      demo: true,
-      notice: SAMPLE_HOT_NOTICE,
-      items: [],
-    });
+    const reason = error?.code === 'RATE_LIMIT'
+      ? '今日知乎热榜额度已用完，先为你展示可开炼的示例议题'
+      : SAMPLE_HOT_NOTICE;
+    return fallbackHotList(reason);
   }
 }
 

@@ -13,6 +13,7 @@ import { generateRecreation, isMockMode } from './lib/llm.mjs';
 import { createReviewPlan, applyGrade, packageProgress } from './lib/review.mjs';
 import { createPackage, getPackage, listPackages, updatePackage } from './lib/store.mjs';
 import { buildAuthorizeUrl, exchangeCode, getSession, createSession, deleteSession, isPublicHttps, createPendingState, verifyState } from './lib/oauth.mjs';
+import { createStateToken, openSession, sealSession, verifyStateToken } from './lib/sessionCookie.mjs';
 import { callUserApi, USER_ENDPOINTS, fetchOAuthUser, clampLimit, normalizeOffset, normalizePaging } from './lib/zhihuApi.mjs';
 import { toHtml, toMarkdown } from './lib/export.mjs';
 import { runPipeline, runPipelineFromSource, runPipelineFromSearch, runCoachTurn, previewSearch } from './agents/pipeline.js';
@@ -58,6 +59,8 @@ import { cacheGet, cacheSet } from './server/lib/cache.mjs';
 // anki.mjs 依赖 node:sqlite（Node v22+），改为动态导入以兼容 v20
 
 const app = express();
+// Railway/容器平台通过反向代理终止 HTTPS；信任第一层代理后才能正确写入 Secure Cookie。
+app.set('trust proxy', 1);
 const config = await readConfig();
 // 预热内置凭证（独立部署、无平台环境变量时从 lib/credentials.json 读取）
 await getBakedCredentials();
@@ -87,9 +90,37 @@ app.use(
   }),
 );
 
+function oauthCookieOptions(req, maxAge) {
+  const forwarded = `${req.protocol}://${String(req.get('host') || '')}/`;
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isPublicHttps(forwarded) || req.secure,
+    path: '/',
+    ...(maxAge ? { maxAge } : {}),
+  };
+}
+
+function clearOauthCookies(req, res) {
+  const options = oauthCookieOptions(req);
+  res.clearCookie('cuizhi_oauth_session', options);
+  res.clearCookie('cuizhi_oauth', options);
+}
+
 function asyncRoute(fn) {
   return (req, res) => {
     Promise.resolve(fn(req, res)).catch((error) => {
+      const hasOauthCookie = Boolean(
+        readCookie(req, 'cuizhi_oauth_session') || readCookie(req, 'cuizhi_oauth'),
+      );
+      const status = Number(error?.status || 0);
+      const code = Number(error?.code);
+      if (hasOauthCookie && (status === 401 || status === 403 || [20001, 20005, 20006].includes(code))) {
+        clearOauthCookies(req, res);
+        res.cookie('cuizhi_logged_out', '1', oauthCookieOptions(req, 12 * 60 * 60 * 1000));
+        res.status(401).json({ ok: false, error: '知乎授权已过期，请重新登录', oauthExpired: true });
+        return;
+      }
       console.error('[request failed]', error);
       res.status(500).json({ ok: false, error: '服务暂时不可用，请稍后再试' });
     });
@@ -179,6 +210,33 @@ function readCookie(req, name) {
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+async function getSessionCookieSecret() {
+  const fromEnv = process.env.CUZHI_SESSION_SECRET || '';
+  if (fromEnv.length >= 16) return fromEnv;
+  const appKey = await getOAuthAppKey(config).catch(() => ({ value: '' }));
+  const access = getHttpAccessSecret();
+  const material = [appKey.value, access.value, config.oauth?.appId].filter(Boolean).join(':');
+  if (material.length < 16) throw new Error('SESSION_SECRET_MISSING');
+  return `cuizhi-oauth-session:${material}`;
+}
+
+async function readOauthSession(req) {
+  const sealed = readCookie(req, 'cuizhi_oauth_session');
+  if (sealed) {
+    const secret = await getSessionCookieSecret();
+    const statelessSession = openSession(sealed, secret);
+    if (statelessSession) return statelessSession;
+  }
+  return getSession(readCookie(req, 'cuizhi_oauth'));
+}
+
+function issueOauthSessionCookie(req, res, secret, session) {
+  const maxAge = session.expiresAt
+    ? Math.min(Math.max(session.expiresAt - Date.now(), 1000), SESSION_COOKIE_TTL_MS)
+    : SESSION_COOKIE_TTL_MS;
+  res.cookie('cuizhi_oauth_session', sealSession(session, secret), oauthCookieOptions(req, maxAge));
+}
+
 function requireSession(req, res) {
   const session = getSession(readCookie(req, 'cuizhi_oauth'));
   if (!session) {
@@ -187,6 +245,8 @@ function requireSession(req, res) {
   }
   return session;
 }
+
+const SESSION_COOKIE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const DIRECT_PROFILE = {
   name: '知乎账号',
@@ -200,8 +260,8 @@ const DIRECT_PROFILE = {
  * 1) OAuth 已授权用户 -> X-OAuth-Token 代表该用户
  * 2) 未走 OAuth 但服务端配置了 Access Secret -> 直连该凭证所属账号（开发/独立部署）
  */
-function resolveIdentity(req, res) {
-  const session = getSession(readCookie(req, 'cuizhi_oauth'));
+async function resolveIdentity(req, res) {
+  const session = await readOauthSession(req);
   if (session) {
     return {
       mode: 'oauth',
@@ -232,13 +292,20 @@ app.get('/api/oauth/status', asyncRoute(async (req, res) => {
   const appId = String(config.oauth?.appId || '').trim();
   const redirectUri = String(config.oauth?.redirectUri || '').trim();
   const access = getHttpAccessSecret();
-  const session = getSession(readCookie(req, 'cuizhi_oauth'));
+  const session = await readOauthSession(req);
   const loginAvailable = Boolean(appId) && isPublicHttps(redirectUri);
   let identity;
   if (session) {
     if (!session.profile || (!session.profile.name && !session.profile.avatarUrl)) {
       const profile = await fetchOAuthUser(session.accessToken).catch(() => null);
-      if (profile) session.profile = profile;
+      if (profile) {
+        session.profile = profile;
+        const sealed = readCookie(req, 'cuizhi_oauth_session');
+        if (sealed) {
+          const secret = await getSessionCookieSecret();
+          issueOauthSessionCookie(req, res, secret, session);
+        }
+      }
     }
     identity = {
       mode: 'oauth',
@@ -282,8 +349,10 @@ app.get('/auth/login', asyncRoute(async (req, res) => {
     });
     return;
   }
-  const state = randomUUID();
+  const secret = await getSessionCookieSecret();
+  const { state, cookie } = createStateToken(secret, 30 * 60 * 1000);
   createPendingState(state);
+  res.cookie('cuizhi_oauth_state', cookie, oauthCookieOptions(req, 30 * 60 * 1000));
   res.redirect(buildAuthorizeUrl(config, state));
 }));
 
@@ -300,11 +369,17 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
     res.redirect('/?oauth=failed');
     return;
   }
-  const stateVerification = verifyState(state);
+  const stateCookie = readCookie(req, 'cuizhi_oauth_state');
+  const stateSecret = await getSessionCookieSecret();
+  const stateVerification = stateCookie
+    ? verifyStateToken(stateCookie, state, stateSecret)
+    : (state ? verifyState(state) : { valid: true, verified: false, reason: 'missing_state_cookie' });
   if (!stateVerification.valid) {
-    res.redirect('/?oauth=failed');
+    res.clearCookie('cuizhi_oauth_state', oauthCookieOptions(req));
+    res.redirect('/?oauth=failed&reason=invalid_state');
     return;
   }
+  res.clearCookie('cuizhi_oauth_state', oauthCookieOptions(req));
   const appKey = await getOAuthAppKey(config);
   if (!appKey.value) {
     res.redirect('/?oauth=failed');
@@ -319,36 +394,40 @@ app.get('/auth/callback', asyncRoute(async (req, res) => {
     });
     // /user 没有正式响应 schema：资料失败不阻断登录和正式数据接口
     const profile = await fetchOAuthUser(accessToken).catch(() => null);
-    const sessionId = createSession(accessToken, {
+    const now = Date.now();
+    const expiresAt = now + (expiresIn && expiresIn > 0 ? Math.min(expiresIn * 1000, SESSION_COOKIE_TTL_MS) : SESSION_COOKIE_TTL_MS);
+    const session = {
+      accessToken,
+      createdAt: now,
+      expiresAt,
       profile,
       stateVerified: stateVerification.verified,
-      expiresIn,
-    });
-    res.cookie('cuizhi_oauth', sessionId, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.clearCookie('cuizhi_logged_out', { path: '/' });
+    };
+    // 兼容旧版内存会话，同时写入加密无状态会话，避免容器重启/多副本导致刚登录就掉登录。
+    const sessionId = createSession(accessToken, session);
+    const secret = await getSessionCookieSecret();
+    issueOauthSessionCookie(req, res, secret, session);
+    res.cookie('cuizhi_oauth', sessionId, oauthCookieOptions(req, SESSION_COOKIE_TTL_MS));
+    res.clearCookie('cuizhi_logged_out', oauthCookieOptions(req));
     res.redirect('/?oauth=success');
   } catch (error) {
-    console.error('[zhihu login failed]', error);
-    res.redirect('/?oauth=failed');
+    console.error('[zhihu login failed]', {
+      message: error.message,
+      status: error.status,
+      apiCode: error.apiCode,
+      apiMessage: error.apiMessage,
+    });
+    const reason = encodeURIComponent(error.code === 'OAUTH_TOKEN_FAILED' ? 'token_failed' : 'callback_failed');
+    res.redirect(`/?oauth=failed&reason=${reason}`);
   }
 }));
 
 app.post('/api/oauth/logout', asyncRoute(async (req, res) => {
   const id = readCookie(req, 'cuizhi_oauth');
   if (id) deleteSession(id);
-  res.clearCookie('cuizhi_oauth', { path: '/' });
+  clearOauthCookies(req, res);
   // 退出后本次浏览器会话不再回退到内置 Access Secret 直连账号
-  res.cookie('cuizhi_logged_out', '1', {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 12 * 60 * 60 * 1000,
-  });
+  res.cookie('cuizhi_logged_out', '1', oauthCookieOptions(req, 12 * 60 * 60 * 1000));
   res.json({ ok: true });
 }));
 
@@ -705,7 +784,7 @@ app.get('/api/packages/:id/export', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/me/contents', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const limit = clampLimit(req.query.Limit, 20);
   const offset = normalizeOffset(req.query.Offset);
@@ -728,7 +807,7 @@ app.get('/api/me/contents', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/me/followees', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const limit = clampLimit(req.query.Limit, 20);
   const offset = normalizeOffset(req.query.Offset);
@@ -746,7 +825,7 @@ app.get('/api/me/followees', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/me/favlists', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const limit = clampLimit(req.query.Limit, 20);
   const data = await callUserApi(USER_ENDPOINTS.favlists, { Limit: limit }, identity.accessToken);
@@ -758,7 +837,7 @@ app.get('/api/me/favlists', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/me/favlist_contents', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const urlToken = String(req.query.FavlistUrlToken || '').trim();
   if (!urlToken) {
@@ -781,7 +860,7 @@ app.get('/api/me/favlist_contents', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/me/collections', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const limit = clampLimit(req.query.Limit, 20);
   const data = await callUserApi(USER_ENDPOINTS.collections, { Limit: limit }, identity.accessToken);
@@ -854,7 +933,7 @@ async function fetchFavlistContentsBatched(accessToken, urlToken, maxItems = 200
 }
 
 app.get('/api/me/favlists/:urlToken/insight', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const { urlToken } = req.params;
   const maxItems = Math.min(200, Math.max(1, Number.parseInt(req.query.Limit, 10) || 200));
@@ -885,7 +964,7 @@ app.get('/api/me/favlists/:urlToken/insight', asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/favlists/:urlToken/alchemy', asyncRoute(async (req, res) => {
-  const identity = resolveIdentity(req, res);
+  const identity = await resolveIdentity(req, res);
   if (!identity) return;
   const { urlToken } = req.params;
   const goal = req.body?.goal || '入门';

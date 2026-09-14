@@ -146,7 +146,10 @@ async function api(path, options = {}, timeoutMs = 25000) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
       console.error(data.error || data.message || `请求失败（${response.status}）`);
-      throw new Error('哎呀，出了点小问题，再试一次吧～');
+      if (data.oauthExpired && typeof refreshOauth === 'function') {
+        await refreshOauth();
+      }
+      throw new Error(data.oauthExpired ? '知乎授权已过期，请重新登录' : '哎呀，出了点小问题，再试一次吧～');
     }
     return data;
   } catch (error) {
@@ -580,57 +583,20 @@ function getTypeConfig() {
 }
 
 function renderTypeBanner() {
-  // 每次渲染学习包前清掉旧分类徽标，避免连续打开不同记录时顶部残留多个分类。
+  // 顶部只展示系统推荐的学习功能，不再提供容易误解的内容类型下拉切换。
   $$('.type-banner').forEach((banner) => banner.remove());
   $('#typeSwitchMenu')?.remove();
 
   const notice = $('#degradedNotice');
   const cfg = getTypeConfig();
+  const primaryLabel = TAB_LABELS[cfg.primary] || '推荐内容';
   const banner = document.createElement('div');
   banner.className = 'type-banner';
   banner.innerHTML = `
-    <button class="type-badge" id="typeBadge">${cfg.emoji} ${cfg.label} ▾</button>
+    <span class="type-badge" aria-label="当前推荐功能">✦ 推荐先看</span>
+    <span class="type-advice">${cfg.emoji} 这包内容建议先从「${escapeHtml(primaryLabel)}」开始。</span>
   `;
   notice.parentNode.insertBefore(banner, notice);
-  banner.querySelector('#typeBadge').addEventListener('click', (event) => {
-    event.stopPropagation();
-    showTypeSwitchMenu(event.currentTarget);
-  });
-}
-
-function showTypeSwitchMenu(anchor) {
-  let menu = $('#typeSwitchMenu');
-  if (menu) menu.remove();
-  menu = document.createElement('div');
-  menu.className = 'type-switch-menu';
-  menu.id = 'typeSwitchMenu';
-  menu.innerHTML = Object.entries(TYPE_CONFIG)
-    .map(
-      ([key, cfg]) =>
-        `<button data-type-switch="${key}" class="${state.pkg.contentType === key ? 'active' : ''}">${cfg.emoji} ${cfg.label}</button>`,
-    )
-    .join('');
-  document.body.appendChild(menu);
-  const rect = anchor.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
-  menu.style.left = `${rect.left + window.scrollX}px`;
-  menu.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-type-switch]');
-    if (!btn) return;
-    state.pkg.contentType = btn.dataset.typeSwitch;
-    menu.remove();
-    const banner = $('.type-banner');
-    if (banner) banner.remove();
-    renderTypeBanner();
-    applyTypeLayout(true);
-  });
-  setTimeout(() => {
-    document.addEventListener('click', function close(event) {
-      if (menu.contains(event.target)) return;
-      menu.remove();
-      document.removeEventListener('click', close);
-    });
-  }, 0);
 }
 
 function applyTypeLayout(autoTab) {
@@ -641,11 +607,12 @@ function applyTypeLayout(autoTab) {
 
   $$('.tab-btn').forEach((btn) => {
     const tab = btn.dataset.tab;
-    btn.hidden = false;
-    btn.classList.remove('dimmed');
+    const isRecommended = tab === primary;
+    btn.hidden = !isRecommended;
+    btn.classList.toggle('dimmed', false);
     const oldBadge = btn.querySelector('.rec-badge');
     if (oldBadge) oldBadge.remove();
-    if (tab === primary) {
+    if (isRecommended) {
       const badge = document.createElement('span');
       badge.className = 'rec-badge';
       badge.textContent = '✦推荐';
@@ -1740,11 +1707,15 @@ async function loadHotList() {
     const data = await api('/api/zhihu/hot?limit=8');
     const items = data.items || [];
     box.classList.remove('hot-list-placeholder');
-    if (quotaNote) quotaNote.hidden = true;
+    if (quotaNote) {
+      quotaNote.hidden = false;
+      quotaNote.textContent = data.notice || (data.demo ? '当前为示例议题，点击仍可直接开炼' : '热榜内容会定时更新，点击议题即可开炼');
+    }
     if (!items.length) {
       box.classList.add('hot-list-placeholder');
-      box.innerHTML = '<div class="empty-inline">今日热榜暂不可用</div>';
+      box.innerHTML = '<div class="empty-inline">今日热榜暂时为空，请稍后再试</div>';
       if (hint) hint.textContent = '';
+      if (quotaNote) quotaNote.textContent = data.notice || '知乎热榜接口暂时没有返回内容';
       return;
     }
     box.innerHTML = items

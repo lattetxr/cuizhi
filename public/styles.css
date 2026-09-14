@@ -1779,36 +1779,6 @@ textarea {
   color: var(--ink);
 }
 
-.type-switch-menu {
-  position: absolute;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-btn);
-  box-shadow: var(--shadow-hover);
-  overflow: hidden;
-}
-
-.type-switch-menu button {
-  border: 0;
-  background: none;
-  text-align: left;
-  padding: 10px 16px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.type-switch-menu button:hover {
-  background: var(--accent-soft);
-}
-
-.type-switch-menu button.active {
-  background: var(--gold-soft);
-  font-weight: 600;
-}
-
 .tab-guide {
   padding: 10px 14px;
   margin-bottom: 12px;
@@ -7747,4 +7717,650 @@ body.welcome-mode {
 
 .coach-hero-text p {
   font-weight: 600;
+}
+
+/* ============================================================
+   v25 mobile hardening：窄屏不横向溢出、不压顶栏、不遮挡内容
+   ============================================================ */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body,
+button,
+input,
+textarea {
+  -webkit-text-size-adjust: 100%;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+.panel,
+.package-card,
+.tabs,
+.profile-head-card,
+.search-preview,
+.menu-panel,
+.guide-dialog,
+.alchemy-box {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --mobile-topbar-h: 112px;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 60px;
+    padding: 8px 12px;
+    overflow: visible;
+  }
+
+  .searchbar {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 72px;
+    grid-template-rows: 40px 44px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .searchbar .brand {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .brand-text {
+    min-width: 0;
+  }
+
+  .brand-text h1 {
+    font-size: 18px !important;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .miner-topbar {
+    display: none !important;
+  }
+
+  .home-view > .miner-mascot.miner-home {
+    display: none !important;
+  }
+
+  .searchbar #sourceInput {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 42px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  #alchemyBtn {
+    grid-column: 3;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    margin: 0;
+    padding: 0 8px;
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  #alchemyBtn .furnace-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  #loginBtn.text-btn {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    max-width: 132px;
+    padding: 6px 4px;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #userMenuBtn.avatar-btn {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .stage {
+    margin-top: var(--mobile-topbar-h);
+    padding: 14px 12px 42px;
+  }
+
+  .home-view {
+    min-height: calc(100dvh - var(--mobile-topbar-h));
+    place-items: stretch;
+    align-content: start;
+    gap: 14px;
+    text-align: left;
+  }
+
+  .home-view > * {
+    min-width: 0;
+  }
+
+  .home-view h2 {
+    font-size: 23px !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .home-view > p,
+  .oauth-note {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .process-flow,
+  .example-grid,
+  .hot-list,
+  .profile-grid,
+  .layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .process-flow {
+    display: grid;
+    width: 100%;
+  }
+
+  .process-step {
+    width: 100%;
+  }
+
+  .example-card {
+    padding: 15px;
+  }
+
+  #favHomeBtn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .package-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .toolbar .button,
+  .toolbar a.button {
+    width: 100%;
+    min-height: 40px;
+    padding-inline: 8px;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    min-height: 38px;
+  }
+
+  .panel,
+  .package-card,
+  .profile-head-card,
+  .search-preview {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px;
+  }
+
+  .profile-id {
+    align-items: flex-start;
+  }
+
+  .profile-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .profile-actions .button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .stance-body .core-claim,
+  .card-title,
+  .concept-name {
+    overflow-wrap: anywhere;
+  }
+
+  .alchemy-overlay,
+  .guide-modal {
+    padding: 12px;
+  }
+
+  .alchemy-box,
+  .guide-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    margin: 0;
+    overflow-y: auto;
+  }
+
+  .alchemy-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .alchemy-progress-row {
+    flex-wrap: wrap;
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+    width: auto;
+    max-width: none;
+  }
+
+  /* 欢迎页：窄屏取消悬浮装饰卡片，避免任何视觉重叠 */
+  .welcome-view {
+    overflow-x: hidden;
+  }
+
+  .wl-nav {
+    width: calc(100% - 20px);
+    margin-top: 10px;
+    padding: 10px 12px;
+    align-items: flex-start;
+  }
+
+  .wl-brand {
+    min-width: 0;
+  }
+
+  .wl-brand-text {
+    min-width: 0;
+  }
+
+  .wl-skip {
+    flex: none;
+    padding: 8px 6px;
+  }
+
+  .wl-hero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 28px 12px 12px;
+    text-align: left;
+  }
+
+  .wl-title {
+    font-size: clamp(29px, 9vw, 38px);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .wl-sub {
+    font-size: 14px;
+    line-height: 1.75;
+  }
+
+  .wl-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .wl-cta-main,
+  .wl-cta-demo {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .wl-hero-art {
+    display: grid;
+    place-items: center;
+    min-height: 210px;
+    order: -1;
+  }
+
+  .wl-lks,
+  .wl-miner {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+  }
+
+  .wl-lks,
+  .wl-miner {
+    width: 148px;
+    height: 148px;
+  }
+
+  .wl-card {
+    display: none !important;
+  }
+
+  .wl-features {
+    grid-template-columns: 1fr;
+    padding: 0 12px;
+  }
+
+  .wl-footer {
+    padding: 34px 12px 30px;
+  }
+
+  /* 全屏演示在手机上改为正常纵向文档流，地图节点也不再绝对定位重叠 */
+  .demo-modal {
+    overflow-y: auto;
+  }
+
+  .demo-stage {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    overflow-y: auto;
+  }
+
+  .demo-scene-item {
+    min-height: auto;
+    padding: 22px 12px 28px;
+  }
+
+  .mine-demo-grid,
+  .classify-stage,
+  .pv-map,
+  .pv-spectrum,
+  .pv-cards,
+  .pv-coach {
+    grid-template-columns: 1fr !important;
+  }
+
+  .knowledge-map-demo {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    padding: 12px;
+  }
+
+  .knowledge-lines {
+    display: none;
+  }
+
+  .map-demo-node,
+  .map-demo-node.core,
+  .map-demo-node.n1,
+  .map-demo-node.n2,
+  .map-demo-node.n3,
+  .map-demo-node.n4 {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 58px;
+    margin: 0 !important;
+  }
+
+  .map-path-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ore-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .ore-row h4,
+  .ore-row cite,
+  .pv-stance p,
+  .pv-panel p {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .searchbar {
+    grid-template-columns: minmax(0, 1fr) auto 64px;
+    gap: 6px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  #alchemyBtn {
+    font-size: 12px;
+    padding-inline: 6px;
+  }
+
+  .wl-title {
+    font-size: 28px;
+  }
+}
+
+/* ============================================================
+   v27：首页“淬 / 炼 / 固 / 验”改为一个整体说明组，避免像可点击按钮
+   ============================================================ */
+ol.process-flow,
+ol.wl-features {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+}
+
+.process-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+  max-width: 880px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.process-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px 16px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.process-step:last-child {
+  border-right: 0;
+}
+
+.process-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  box-shadow: none;
+}
+
+.process-info {
+  min-width: 0;
+}
+
+.process-info strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.process-info span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* 欢迎页的四个说明也收进同一个容器，保持深色主题 */
+.wl-features {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  max-width: 1160px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(143, 188, 255, 0.18);
+  border-radius: var(--radius);
+  background: rgba(10, 32, 64, 0.68);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.wl-feature {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 18px 16px;
+  border: 0;
+  border-right: 1px solid rgba(143, 188, 255, 0.14);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-align: left;
+  cursor: default;
+}
+
+.wl-feature:last-child {
+  border-right: 0;
+}
+
+.wl-feature .wl-f-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.wl-feature strong {
+  min-width: 0;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.wl-feature span:last-child {
+  grid-column: 2;
+  color: #b9c9dd;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .process-flow,
+  .wl-features {
+    grid-template-columns: 1fr;
+  }
+
+  .process-step,
+  .wl-feature {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .wl-feature {
+    border-bottom-color: rgba(143, 188, 255, 0.14);
+  }
+
+  .process-step:last-child,
+  .wl-feature:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .process-flow,
+  .wl-features {
+    width: 100%;
+    margin-top: 18px;
+    border-radius: 14px;
+  }
+
+  .process-step,
+  .wl-feature {
+    padding: 15px 16px;
+  }
+
+  .process-info span,
+  .wl-feature span:last-child {
+    font-size: 13px;
+  }
+}
+
+/* v27：功能页顶部只保留推荐功能，禁用下拉式类型切换 */
+.type-banner {
+  justify-content: flex-start;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  user-select: none;
+}
+
+.tabs:not(.tabs-keep-all) .tab-btn[hidden] {
+  display: none !important;
+}
+
+.tabs:not(.tabs-keep-all) {
+  display: flex;
+  justify-content: flex-start;
 }
