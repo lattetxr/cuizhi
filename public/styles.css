@@ -8392,3 +8392,36 @@ ol.wl-features {
     border-bottom: 0;
   }
 }
+
+/* ============================================================
+   v29：去除说明卡与功能页单分类栏的容器边框
+   ============================================================ */
+.process-flow,
+.wl-features {
+  gap: 18px;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.process-step,
+.wl-feature {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+@media (max-width: 900px) {
+  .process-flow,
+  .wl-features {
+    gap: 14px;
+  }
+}
+
+/* 当前功能页只展示自动推荐的一个页签，保留外框会像可切换的分类栏；直接隐藏。 */
+#tabBar {
+  display: none !important;
+}
