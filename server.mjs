@@ -233,6 +233,10 @@ app.get('/api/oauth/status', asyncRoute(async (req, res) => {
   const loginAvailable = Boolean(appId) && isPublicHttps(redirectUri);
   let identity;
   if (session) {
+    if (!session.profile || (!session.profile.name && !session.profile.avatarUrl)) {
+      const profile = await fetchOAuthUser(session.accessToken).catch(() => null);
+      if (profile) session.profile = profile;
+    }
     identity = {
       mode: 'oauth',
       authorized: true,

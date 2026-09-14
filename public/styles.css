@@ -3658,6 +3658,19 @@ body {
 }
 
 @media (max-width: 520px) {
+  .avatar-user-btn {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .top-user-name {
+    display: none;
+  }
+
   .topbar-actions {
     width: 100%;
   }
@@ -4217,6 +4230,38 @@ body.demo-open {
   position: relative;
   padding: 0;
   overflow: hidden;
+}
+
+
+.avatar-user-btn {
+  width: auto;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 11px 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.avatar-user-btn .avatar-wrap {
+  inset: 0 auto auto 0;
+  width: 36px;
+  height: 36px;
+}
+
+.top-user-name {
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .avatar-wrap {

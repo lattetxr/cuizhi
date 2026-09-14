@@ -222,7 +222,15 @@ function renderOauth(status) {
   if (identity.authorized) {
     loginBtn.hidden = identity.mode === 'oauth';
     avatarBtn.hidden = false;
-    avatarBtn.innerHTML = avatarHtml(identity.profile, 'avatar-top').replace('avatar-wrap ', 'avatar-wrap ');
+    const displayName = identity.profile?.name || '知乎用户';
+    const showTopName = identity.mode === 'oauth' && Boolean(identity.profile?.name);
+    avatarBtn.classList.toggle('avatar-user-btn', showTopName);
+    avatarBtn.title = showTopName ? displayName : '个人中心';
+    avatarBtn.setAttribute('aria-label', showTopName ? `个人中心：${displayName}` : '个人中心');
+    avatarBtn.innerHTML = `
+      ${avatarHtml(identity.profile, 'avatar-top')}
+      ${showTopName ? `<span class="top-user-name">${escapeHtml(displayName)}</span>` : ''}
+    `;
     favHomeBtn.textContent = '查看我的收藏夹';
   } else {
     loginBtn.hidden = false;
@@ -454,23 +462,16 @@ function setPackageTab(name) {
   renderTab();
 }
 
-function renderCollectionFramework(pkg) {
+function collectionFrameworkHtml(pkg) {
   const framework = pkg.collectionFramework;
-  const panel = $('#collectionFrameworkPanel');
-  if (!panel) return;
-  if (!framework) {
-    panel.innerHTML = '';
-    panel.hidden = true;
-    return;
-  }
+  if (!framework) return '';
   const selectedCount = pkg.collectionMeta?.selectedCount || pkg.sourceAnswers?.length || 0;
-  panel.hidden = false;
-  panel.innerHTML = `
+  return `
     <section class="collection-framework-card package-card">
       <div class="cf-hero">
         <div>
-          <span class="cf-kicker">整夹知识框架</span>
-          <h3>先看知识骨架，再进入观点、地图与复习卡片</h3>
+          <span class="cf-kicker">整夹知识框架 · 认知地图</span>
+          <h3>先掌握收藏夹骨架，再按路径逐步消化</h3>
           <p>${escapeHtml(framework.summary)}</p>
         </div>
         <div class="cf-stat-grid">
@@ -528,7 +529,6 @@ function renderCollectionFramework(pkg) {
       </div>
     </section>`;
 }
-
 function renderPackage(pkg) {
   state.pkg = pkg;
   $('#homeView').hidden = true;
@@ -544,7 +544,6 @@ function renderPackage(pkg) {
   ].join(' · ');
   $('#exportMdBtn').href = `/api/packages/${pkg.id}/export?format=md`;
   $('#exportHtmlBtn').href = `/api/packages/${pkg.id}/export?format=html`;
-  renderCollectionFramework(pkg);
   const notice = $('#degradedNotice');
   if (pkg.notices?.length) {
     notice.hidden = false;
@@ -968,12 +967,14 @@ function renderMap() {
   const pkg = state.pkg;
   const data = pkg.mapData;
   const steps = data?.learning_path || pkg.path || [];
+  const frameworkHtml = pkg.collectionFramework ? collectionFrameworkHtml(pkg) : '';
   const nodes = steps.slice(0, 6).map((step, index) => ({
     ...step,
     x: MAP_NODES[index].x,
     y: MAP_NODES[index].y,
   }));
   return `
+    ${frameworkHtml}
     <div class="package-card map-card">
       <div class="section-toolbar">
         <span class="section-title">学习路径</span>
