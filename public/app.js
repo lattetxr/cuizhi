@@ -597,9 +597,16 @@ function applyTypeLayout(autoTab) {
   $$('.tab-btn').forEach((btn) => {
     const tab = btn.dataset.tab;
     const isRecommended = tab === primary;
-    btn.hidden = !isRecommended;
+    // v32：推荐功能之外，其余功能页签也全部显示
+    btn.hidden = false;
     btn.classList.toggle('dimmed', false);
     btn.querySelectorAll('.rec-badge').forEach((badge) => badge.remove());
+    if (isRecommended) {
+      const badge = document.createElement('span');
+      badge.className = 'rec-badge';
+      badge.textContent = '推荐';
+      btn.appendChild(badge);
+    }
   });
 
   // 推荐功能放在第一个
