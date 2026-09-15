@@ -8434,3 +8434,15 @@ ol.wl-features {
   margin-right: auto !important;
   margin-left: auto !important;
 }
+
+/* ============================================================
+   v31：欢迎页四阶段仅作说明，不保留卡片边框/底色，避免误导为可点击入口
+   ============================================================ */
+.wl-features,
+.wl-feature,
+.wl-feature:last-child {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
